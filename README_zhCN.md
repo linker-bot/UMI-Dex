@@ -1,5 +1,7 @@
 # UMI-Dex
 
+![](.github/assets/connected.png)
+
 **语言：** [English](README.md) · 简体中文（本页）
 
 UMI-Dex 是一套基于 ROS 2 的灵巧手遥操作数据采集系统，通过同构手套（USB 串口编码器）与视觉惯性里程计（VIO）同步录制操作者的手部关节角度与末端位姿，输出对齐的 CSV 数据集，用于后续的模仿学习或动作回放。

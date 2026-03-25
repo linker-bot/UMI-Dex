@@ -1,5 +1,7 @@
 # UMI-Dex
 
+![](.github/assets/connected.png)
+
 **Languages:** English (this file) · [简体中文](README_zhCN.md)
 
 UMI-Dex is a ROS 2–based dexterous-hand teleoperation data collection stack. It synchronously records the operator’s hand joint angles and end-effector pose using a homologous glove (USB serial encoders) and visual-inertial odometry (VIO), producing aligned CSV datasets for imitation learning or action replay.
