@@ -1,0 +1,8 @@
+# Python dependencies for project scripts/packages.
+# ROS2 message/client libraries (rclpy, std_msgs, geometry_msgs, nav_msgs) are
+# installed from ROS2 apt packages, not via pip.
+
+pyserial>=3.5
+
+# Optional test tooling
+pytest>=7.0

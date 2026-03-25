@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    use_stereo: false
+    use_imu: true

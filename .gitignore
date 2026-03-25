@@ -1,0 +1,35 @@
+# ROS2 / colcon build outputs
+/build/
+/install/
+/log/
+
+# Python cache and tooling
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Runtime capture outputs
+output_topics_*/
+script/**/output_topics_*/
+script/**/controller_angles.csv
+script/**/pose_imu.csv
+sample_data/**/controller_angles.csv
+sample_data/**/pose_imu.csv
+
+# Accidental nested git repository artifacts
+script/.git/
