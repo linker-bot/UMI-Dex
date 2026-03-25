@@ -4,7 +4,7 @@
   <name>kimera_vio_bringup</name>
   <version>1.0.0</version>
   <description>ROS2 bringup package for RealSense D455 and Kimera-VIO integration.</description>
-  <maintainer email="ywt@todo.todo">ywt</maintainer>
+  <maintainer email="helloworld@linkerbot.cn">linkerbot</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_python</buildtool_depend>

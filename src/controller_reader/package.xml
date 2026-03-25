@@ -4,7 +4,7 @@
   <name>controller_reader</name>
   <version>1.0.0</version>
   <description>USB串口控制器数据读取节点，读取6轴控制器角度数据并发布ROS2话题</description>
-  <maintainer email="ywt@todo.todo">ywt</maintainer>
+  <maintainer email="helloworld@linkerbot.cn">linkerbot</maintainer>
   <license>Apache-2.0</license>
 
   <depend>rclpy</depend>
