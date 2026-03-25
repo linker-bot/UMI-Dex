@@ -68,6 +68,8 @@ colcon build --packages-select controller_reader kimera_vio_bringup
 
 ## Hardware and udev
 
+![](./hardware/UMI-Dex_Dual%20IMU%20and%20encoder%20reading.step.jpg) ![](./hardware/L6-TG-STEP/L6-TG-Preview.png)
+
 For CAD/PCB assets (STEP, EasyEDA), see [Hardware documentation](#hardware-documentation) above.
 
 The 6-DOF encoders use a CH343 USB–serial bridge. For a stable device path on each plug-in, use the udev rule shipped with `controller_reader`:

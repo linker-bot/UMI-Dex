@@ -68,6 +68,8 @@ colcon build --packages-select controller_reader kimera_vio_bringup
 
 ## 硬件与 udev 配置
 
+![](./hardware/UMI-Dex_Dual%20IMU%20and%20encoder%20reading.step.jpg) ![](./hardware/L6-TG-STEP/L6-TG-Preview.png)
+
 机械结构、PCB 等设计文件说明见上文 [硬件设计资料](#硬件设计资料)。
 
 本项目使用的 6 轴编码器基于 CH343 USB 转串口芯片。为了让设备在每次插入时都获得固定的设备路径，可使用 `controller_reader` 随附的 udev 规则：
