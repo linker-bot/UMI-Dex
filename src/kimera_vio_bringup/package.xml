@@ -5,7 +5,7 @@
   <version>1.0.0</version>
   <description>ROS2 bringup package for RealSense D455 and Kimera-VIO integration.</description>
   <maintainer email="ywt@todo.todo">ywt</maintainer>
-  <license>MIT</license>
+  <license>Apache-2.0</license>
 
   <buildtool_depend>ament_python</buildtool_depend>
 

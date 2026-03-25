@@ -22,7 +22,7 @@ setup(
     maintainer='ywt',
     maintainer_email='ywt@todo.todo',
     description='USB串口控制器数据读取节点，读取6轴控制器角度数据并发布ROS2话题',
-    license='MIT',
+    license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [

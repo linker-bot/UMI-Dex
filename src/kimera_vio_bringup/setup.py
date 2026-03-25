@@ -28,7 +28,7 @@ setup(
     maintainer="ywt",
     maintainer_email="ywt@todo.todo",
     description="ROS2 bringup package for RealSense D455 and Kimera-VIO integration.",
-    license="MIT",
+    license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={},
 )
