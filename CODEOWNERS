@@ -1,0 +1,31 @@
+# UMI-Dex (Linkerbot) — CODEOWNERS
+#
+# GitHub uses this file to suggest reviewers for pull requests. Lines starting
+# with # are comments. Each rule is: <path-pattern> <space-separated @owners>
+#
+# How to customize:
+# - Replace @linkerbot with real GitHub usernames or @org/team-slug when known.
+# - Add more specific paths above broader ones; when multiple patterns match a
+#   file, the last matching line wins.
+# - See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# -----------------------------------------------------------------------------
+
+# --- Default (everything) ---
+* @linkerbot
+
+# --- ROS packages ---
+/src/controller_reader/ @linkerbot
+/src/kimera_vio_bringup/ @linkerbot
+
+# --- Scripts ---
+/script/ @linkerbot
+
+# --- Hardware ---
+/hardware/ @linkerbot
+
+# --- CI / Community ---
+/.github/ @linkerbot
+
+# --- Documentation ---
+*.md @linkerbot

@@ -1,6 +1,6 @@
 # 硬件资料（Hardware）
 
-**语言：** [English](README.md) · 简体中文（本页）
+**文档与语言：** [English](README.md) · 简体中文（本页）· [文档索引](../docs/README.md)
 
 本目录存放 UMI-Dex 相关的机械结构（STEP）与电路板设计资料，便于复现与加工。整机软件栈与系统说明见仓库根目录 [README](../README.md)。
 

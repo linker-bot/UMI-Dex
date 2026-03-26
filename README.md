@@ -2,7 +2,7 @@
 
 ![](.github/assets/connected.png)
 
-**Languages:** English (this file) · [简体中文](README_zhCN.md)
+**Documentation:** English (this file) · [简体中文](README_zhCN.md) · [Docs index / 文档索引](docs/README.md)
 
 UMI-Dex is a ROS 2–based dexterous-hand teleoperation data collection stack. It synchronously records the operator’s hand joint angles and end-effector pose using a homologous glove (USB serial encoders) and visual-inertial odometry (VIO), producing aligned CSV datasets for imitation learning or action replay.
 
@@ -165,6 +165,13 @@ The capture script writes two CSV files in the output directory:
 | `angle_0` – `angle_5` | Mapped control values for six joints |
 
 > **Note:** The two CSVs use different timestamp sources. `pose_imu.csv` uses the VIO/pose message `header.stamp`; `controller_angles.csv` uses the node’s local clock because encoder messages do not carry a standard timestamp header. Account for this when aligning data.
+
+## Contributing
+
+We welcome contributions of all kinds! Please read our [Contributing Guide](CONTRIBUTING.md) to get started.
+
+- [Code of Conduct](CODE_OF_CONDUCT.md) — community standards we uphold
+- [Security Policy](SECURITY.md) — how to report vulnerabilities privately
 
 ## License
 

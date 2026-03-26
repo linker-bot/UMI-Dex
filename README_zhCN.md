@@ -2,7 +2,7 @@
 
 ![](.github/assets/connected.png)
 
-**语言：** [English](README.md) · 简体中文（本页）
+**文档与语言：** [English](README.md) · 简体中文（本页）· [文档索引](docs/README.md)
 
 UMI-Dex 是一套基于 ROS 2 的灵巧手遥操作数据采集系统，通过同构手套（USB 串口编码器）与视觉惯性里程计（VIO）同步录制操作者的手部关节角度与末端位姿，输出对齐的 CSV 数据集，用于后续的模仿学习或动作回放。
 
@@ -165,6 +165,13 @@ python3 ros_topic_capture_save.py
 | `angle_0` – `angle_5` | 6 个关节的映射控制值 |
 
 > **注意：** 两个 CSV 的时间戳来源不同。`pose_imu.csv` 使用 VIO/位姿消息的 `header.stamp`；`controller_angles.csv` 使用节点本地时钟，因为编码器消息不携带标准时间戳头。在做数据对齐时需考虑这一差异。
+
+## 参与贡献
+
+欢迎各种形式的贡献！请阅读 [贡献指南](CONTRIBUTING.md) 了解详情。
+
+- [行为准则](CODE_OF_CONDUCT.md) — 我们共同遵守的社区规范
+- [安全政策](SECURITY.md) — 如何私下报告安全漏洞
 
 ## 许可证
 

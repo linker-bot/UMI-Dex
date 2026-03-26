@@ -33,3 +33,5 @@ sample_data/**/pose_imu.csv
 
 # Accidental nested git repository artifacts
 script/.git/
+
+GAP_BASELINE.md

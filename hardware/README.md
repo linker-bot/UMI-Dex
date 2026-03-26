@@ -1,6 +1,6 @@
 # Hardware
 
-**Languages:** English (this file) · [简体中文](README_zhCN.md)
+**Documentation:** English (this file) · [简体中文](README_zhCN.md) · [Docs index](../docs/README.md)
 
 This directory contains mechanical CAD (STEP) and PCB-related assets for reproducing and manufacturing UMI-Dex hardware. For the full software stack and system overview, see the repository root [README](../README.md).
 
