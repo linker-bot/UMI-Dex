@@ -4,175 +4,165 @@
 
 **文档与语言：** [English](README.md) · 简体中文（本页）· [文档索引](docs/README.md)
 
-UMI-Dex 是一套基于 ROS 2 的灵巧手遥操作数据采集系统，通过同构手套（USB 串口编码器）与视觉惯性里程计（VIO）同步录制操作者的手部关节角度与末端位姿，输出对齐的 CSV 数据集，用于后续的模仿学习或动作回放。
+UMI-Dex 是一套面向灵巧手遥操作的数据采集流水线：通过同构手套（USB 串口编码器）与视觉惯性里程计（VIO）同步记录操作者的手部关节角度与末端位姿，输出统一时间轴对齐的数据文件，用于后续模仿学习、动作回放与数据处理。
 
-本工作空间采用 **Intel RealSense D455 + Kimera-VIO**（通过 `realsense2_camera` 与 `kimera_vio_ros`），而非 OpenVINS。录制脚本仍要求话题 **`/poseimu`**（`geometry_msgs/PoseWithCovarianceStamped`）；若你安装的 Kimera 发布在其它话题或消息类型上，请在录制前通过转发/重映射等方式，使数据以 `/poseimu` 上的 `PoseWithCovarianceStamped` 形式可用。
+当前项目实现采用 **Intel RealSense D455 + ORB-SLAM3（stereo-inertial）** 的 PC 侧本地采集方案（`uv` 管理 Python 工作流），直接在采集进程内完成轨迹估计与时间同步导出，不依赖 `kimera_vio_ros` 或 `/poseimu` 话题桥接。
 
-## 系统架构
+## 当前功能（PC）
 
-```mermaid
-flowchart LR
-  Glove[USB 编码器手套]
-  CR[controller_reader]
-  Camera[RealSense D455]
-  RS[realsense2_camera]
-  VIO[Kimera-VIO]
-  Capture[ros_topic_capture_save]
-  CSV[(CSV 文件)]
+- RealSense D455 双目 IR + IMU 采集
+- ORB-SLAM3 双目惯性轨迹估计
+- USB 控制器角度采集（原始值 + 映射值）
+- 轨迹与控制器数据离线对齐与可视化
 
-  Glove -->|串口| CR
-  Camera --> RS
-  RS -->|IR + IMU| VIO
-  CR -->|/controller/angles| Capture
-  VIO -->|/poseimu*| Capture
-  Capture --> CSV
-```
+## 环境要求
 
-\*需将 VIO 输出以 `geometry_msgs/PoseWithCovarianceStamped` 形式发布在 `/poseimu` 上（见 [运行](#运行)）。
+- Python 3.12+
+- 已安装 `uv`（推荐）
+- Intel RealSense D455（运行采集时需要）
+- 可选控制器串口设备（默认 `/dev/l6encoder_usb`）
 
-## 依赖
+## 环境准备
 
-- **ROS 2**（已在 Jazzy 上测试）
-- **Python**：`rclpy`、`pyserial`（见 [requirements.txt](requirements.txt)）
-- **ROS 软件包**（请按发行版单独安装）：
-  - `realsense2_camera`
-  - `kimera_vio_ros`（或你使用的 Kimera ROS 2 包；launch 支持覆盖包名与可执行文件名）
-- **硬件**：6 轴 USB 串口编码器手套、Intel RealSense D455
-
-## 硬件设计资料
-
-L6 手套机械 STEP、PCB 模型与使用说明位于 [`hardware/`](hardware/) 目录。详见 [hardware/README_zhCN.md](hardware/README_zhCN.md)（[English](hardware/README.md)）。
-
-## 获取源码
+1) 如果未安装 `uv`，先安装：
 
 ```bash
-git clone <your-fork-or-repo-url>
-cd <repo-root>
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-本仓库在 `src/` 下提供 **ROS 2 功能包**（`controller_reader`、`kimera_vio_bringup`）。当前布局中 **不包含 OpenVINS 子模块**；VIO 由外部的 Kimera-VIO 栈提供。
-
-## 编译
+2) 创建并同步项目环境：
 
 ```bash
-source /opt/ros/jazzy/setup.bash
-colcon build
-source install/setup.bash
+uv sync
 ```
 
-若仅编译本仓库自有包：
+3) 激活虚拟环境：
 
 ```bash
-colcon build --packages-select controller_reader kimera_vio_bringup
+source .venv/bin/activate
 ```
 
-## 硬件与 udev 配置
-
-![](./hardware/UMI-Dex_Dual%20IMU%20and%20encoder%20reading.step.jpg) ![](./hardware/L6-TG-STEP/L6-TG-Preview.png)
-
-机械结构、PCB 等设计文件说明见上文 [硬件设计资料](#硬件设计资料)。
-
-本项目使用的 6 轴编码器基于 CH343 USB 转串口芯片。为了让设备在每次插入时都获得固定的设备路径，可使用 `controller_reader` 随附的 udev 规则：
+4) 下载 ORB-SLAM3 词典到 `config/`（首次执行一次即可）：
 
 ```bash
-cd src/controller_reader/script
-sudo bash bind_usb.sh
+curl -L "https://github.com/UZ-SLAMLab/ORB_SLAM3/raw/master/Vocabulary/ORBvoc.txt.tar.gz" -o ./config/ORBvoc.txt.tar.gz
+tar -xzf ./config/ORBvoc.txt.tar.gz -C ./config
+rm ./config/ORBvoc.txt.tar.gz
 ```
 
-该脚本会将 `l6encoder_usb.rules` 安装到 `/etc/udev/rules.d/`，使 CH343 设备自动创建 `/dev/l6encoder_usb` 符号链接。之后在 `src/controller_reader/config/controller_reader_params.yaml` 中将 `serial_port` 设置为 `/dev/l6encoder_usb` 即可。
+## 主流程（推荐）
 
-## 运行
-
-需要打开多个终端，按顺序启动以下进程。
-
-### 1. 启动控制器 / 编码器节点
+1) 启动交互式录制（脚本入口）：
 
 ```bash
-source install/setup.bash
-ros2 launch controller_reader controller_reader.launch.py
+uv run python script/interactive_record.py \
+  --vocab ./config/ORBvoc.txt \
+  --settings ./config/intel_d455.yaml \
+  --out_dir ./outputs/realtime_map
 ```
 
-支持通过 launch 参数覆盖串口：
+2) 轨迹可视化（脚本入口）：
 
 ```bash
-ros2 launch controller_reader controller_reader.launch.py serial_port:=/dev/ttyUSB1
+MPLCONFIGDIR="$(pwd)/.mplcache" uv run python script/visualize_trajectory.py \
+  --traj ./outputs/realtime_map/trajectory.txt \
+  --points ./outputs/realtime_map/tracked_points.xyz \
+  --out_dir ./outputs/realtime_map/plots \
+  --traj_only
 ```
 
-如果启动失败，可先检查串口设备：`ls /dev/tty*`。
-
-### 2. 启动 RealSense + Kimera-VIO
+3) 可选：轨迹与控制器数据对齐：
 
 ```bash
-source install/setup.bash
-ros2 launch kimera_vio_bringup d455_kimera_vio.launch.py
+uv run align-trajectory \
+  --traj ./outputs/realtime_map/trajectory.txt \
+  --controller ./outputs/realtime_map/controller_angles.csv \
+  --out ./outputs/realtime_map/trajectory_controller_aligned.csv
 ```
 
-常用 launch 参数（详见 [d455_kimera_vio.launch.py](src/kimera_vio_bringup/launch/d455_kimera_vio.launch.py)）：
+## 交互式录制控制（终端）
 
-| 参数 | 说明 |
-|------|------|
-| `use_stereo:=true` | 开启双目红外（infra1 + infra2） |
-| `rviz_enable:=true` | 启动 RViz2 |
-| `kimera_package:=...` | Kimera ROS 2 包名（默认 `kimera_vio_ros`） |
-| `kimera_executable:=...` | 节点可执行文件名（默认 `kimera_vio_ros_node`） |
-| `kimera_params_file:=/绝对路径.yaml` | Kimera 参数文件 |
-
-启动录制脚本前，请确认 Kimera 管线已发布（或已重映射到）**`/poseimu`**，且消息类型为 `geometry_msgs/PoseWithCovarianceStamped`。
-
-### 3. 启动话题录制
+启动命令：
 
 ```bash
-cd script
-python3 ros_topic_capture_save.py
+uv run record-interactive \
+  --vocab ./config/ORBvoc.txt \
+  --settings ./config/intel_d455.yaml \
+  --out_dir ./outputs/realtime_map
 ```
 
-常用参数：
+按键说明：
 
-| 参数 | 说明 | 默认值 |
-|------|------|--------|
-| `-o DIR` | 输出目录 | `output_topics_YYYYMMDD_HHMMSS` |
-| `-t SEC` | 录制时长（秒），`0` 表示按 Ctrl+C 停止 | `0` |
-| `--no-pose` | 不订阅 `/poseimu` | — |
-| `--no-controller` | 不订阅 `/controller/angles` | — |
+- `s`：开始录制
+- `c`：停止当前录制并保存输出
+- `r`：删除/重置上一次输出目录内容（危险操作）
+- `q`：退出控制器
 
-## 话题与 CSV 说明
+说明：
 
-### ROS 2 话题
+- 录制进行中不允许执行 `r`，请先按 `c` 停止。
+- 交互式控制器会以子进程方式启动 `orb_runner`，并在停止时执行安全退出流程。
+- 交互模式下会屏蔽 `orb_runner` 的常规日志，仅保留 warning/error/traceback 等异常输出。
+- 启动器实现源码位于 `script/interactive_record.py`。
 
-| 话题 | 消息类型 | 说明 |
-|------|----------|------|
-| `/controller/angles` | `std_msgs/Float32MultiArray` | 6 轴关节角度映射值（0–1023） |
-| `/controller/angles_raw` | `std_msgs/Float32MultiArray` | 6 轴原始角度（可通过参数关闭） |
-| `/poseimu` | `geometry_msgs/PoseWithCovarianceStamped` | 供录制的 6DoF 位姿（来自 VIO / 桥接节点） |
+## 调试/开发命令（进阶）
 
-### CSV 输出
+用于直接测试 `orb_runner` 与底层排障：
 
-录制脚本在输出目录下写入两个 CSV 文件：
+```bash
+uv run orb-run \
+  --vocab ./config/ORBvoc.txt \
+  --settings ./config/intel_d455.yaml \
+  --out_dir ./outputs/realtime_map \
+  --disable_controller_capture
+```
 
-**pose_imu.csv**
+```bash
+uv run orb-run \
+  --vocab ./config/ORBvoc.txt \
+  --settings ./config/intel_d455.yaml \
+  --out_dir ./outputs/realtime_map \
+  --controller_port /dev/l6encoder_usb
+```
 
-| 列名 | 说明 |
-|------|------|
-| `timestamp_sec`, `timestamp_nsec` | 位姿消息头中的时间戳（`msg.header.stamp`） |
-| `pos_x`, `pos_y`, `pos_z` | 位置 |
-| `orient_x`, `orient_y`, `orient_z`, `orient_w` | 四元数姿态 |
+其他保留的开发封装命令：
 
-**controller_angles.csv**
+```bash
+uv run record-interactive --help
+uv run visualize-trajectory --help
+uv run record-realsense --out ./recordings/session_001
+```
 
-| 列名 | 说明 |
-|------|------|
-| `timestamp_sec`, `timestamp_nsec` | 节点接收样本时的本地时钟（`node.get_clock().now()`） |
-| `angle_0` – `angle_5` | 6 个关节的映射控制值 |
+## 示例数据（即将发布）
 
-> **注意：** 两个 CSV 的时间戳来源不同。`pose_imu.csv` 使用 VIO/位姿消息的 `header.stamp`；`controller_angles.csv` 使用节点本地时钟，因为编码器消息不携带标准时间戳头。在做数据对齐时需考虑这一差异。
+公开高质量示例数据将在当前设备与数据链路达到目标质量标准后发布。
 
-## 参与贡献
+## 输出文件（`--out_dir`）
 
-欢迎各种形式的贡献！请阅读 [贡献指南](CONTRIBUTING.md) 了解详情。
+- `trajectory.txt`
+- `tracked_points.xyz`
+- `map_info.json`
+- `export_summary.json`
+- `orb_frame_times.csv`
+- `run_clock_info.csv`
+- `controller_angles.csv`（启用控制器采集时生成）
 
-- [行为准则](CODE_OF_CONDUCT.md) — 我们共同遵守的社区规范
-- [安全政策](SECURITY.md) — 如何私下报告安全漏洞
+## 使用说明与排障建议
 
-## 许可证
+- Linux 串口权限：若控制器连接失败，请检查串口权限（`dialout` 用户组或 udev 规则）。
+- 若 `orbslam3` 导入失败，请重新执行 `uv sync` 并检查 `uv` 环境是否正常。
+- 仅轨迹测试可使用 `--disable_controller_capture`。
+- 在受限环境中可视化建议使用 `MPLCONFIGDIR="$(pwd)/.mplcache"`。
 
-本项目基于 [Apache License 2.0](LICENSE) 开源，希望整个行业和生态越来越好 ❤️
+## 项目结构
+
+- 流水线代码：`src/linker_umi_dex/`
+- 交互式录制启动器：`script/interactive_record.py`
+- 轨迹可视化脚本：`script/visualize_trajectory.py`
+- ORB 资源/配置：`config/intel_d455.yaml`、`config/ORBvoc.txt`
+- 运行输出：`outputs/`、`recordings/`
+
+## 许可证说明
+
+- 本项目基于 [Apache License 2.0](LICENSE) 开源，希望整个行业和生态越来越好 ❤️
+- 第三方依赖（含 ORB-SLAM3 与 `orbslam3-python`）遵循各自许可证要求。

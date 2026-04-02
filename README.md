@@ -4,175 +4,165 @@
 
 **Documentation:** English (this file) · [简体中文](README_zhCN.md) · [Docs index / 文档索引](docs/README.md)
 
-UMI-Dex is a ROS 2–based dexterous-hand teleoperation data collection stack. It synchronously records the operator’s hand joint angles and end-effector pose using a homologous glove (USB serial encoders) and visual-inertial odometry (VIO), producing aligned CSV datasets for imitation learning or action replay.
+UMI-Dex is a dexterous-hand teleoperation data collection pipeline. It records hand joint angles (USB serial encoder glove) and end-effector trajectory (visual-inertial odometry) on a shared timeline for imitation learning, replay, and downstream data processing.
 
-This workspace uses **Intel RealSense D455 + Kimera-VIO** (via `realsense2_camera` and `kimera_vio_ros`) instead of OpenVINS. The capture script still expects **`/poseimu`** (`geometry_msgs/PoseWithCovarianceStamped`); if your Kimera install publishes a different topic or message type, add a relay/remap so that data is available on `/poseimu` before recording.
+The current implementation uses a **PC-local Intel RealSense D455 + ORB-SLAM3 (stereo-inertial)** workflow managed by `uv`. Trajectory estimation and time-synced export are done directly inside the capture process, without relying on `kimera_vio_ros` or a `/poseimu` bridge.
 
-## Architecture
+## Current Features (PC)
 
-```mermaid
-flowchart LR
-  Glove[USB encoder glove]
-  CR[controller_reader]
-  Camera[RealSense D455]
-  RS[realsense2_camera]
-  VIO[Kimera-VIO]
-  Capture[ros_topic_capture_save]
-  CSV[(CSV files)]
-
-  Glove -->|Serial| CR
-  Camera --> RS
-  RS -->|IR + IMU| VIO
-  CR -->|/controller/angles| Capture
-  VIO -->|/poseimu*| Capture
-  Capture --> CSV
-```
-
-\*Ensure VIO output is exposed as `geometry_msgs/PoseWithCovarianceStamped` on `/poseimu` (see [Run](#run)).
+- RealSense D455 stereo IR + IMU capture
+- ORB-SLAM3 stereo-inertial trajectory estimation
+- USB controller angle capture (raw + mapped values)
+- Offline alignment and visualization for trajectory/controller data
 
 ## Requirements
 
-- **ROS 2** (tested on Jazzy)
-- **Python**: `rclpy`, `pyserial` (see [requirements.txt](requirements.txt))
-- **ROS packages** (install separately for your distro):
-  - `realsense2_camera`
-  - `kimera_vio_ros` (or your Kimera ROS 2 package; launch file allows overriding package/executable names)
-- **Hardware**: 6-DOF USB serial encoder glove, Intel RealSense D455
+- Python 3.12+
+- `uv` installed (recommended)
+- Intel RealSense D455 (required for capture)
+- Optional controller serial device (default `/dev/l6encoder_usb`)
 
-## Hardware documentation
+## Setup
 
-Mechanical STEP models for the L6 glove, PCB STEP files, and usage notes are under [`hardware/`](hardware/). See [hardware/README.md](hardware/README.md) ([简体中文](hardware/README_zhCN.md)).
-
-## Get the source
+1) Install `uv` if needed:
 
 ```bash
-git clone <your-fork-or-repo-url>
-cd <repo-root>
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-This tree ships **ROS 2 packages** under `src/` (`controller_reader`, `kimera_vio_bringup`). There is **no OpenVINS submodule** in this layout; VIO is provided by the external Kimera-VIO stack.
-
-## Build
+2) Create and sync the project environment:
 
 ```bash
-source /opt/ros/jazzy/setup.bash
-colcon build
-source install/setup.bash
+uv sync
 ```
 
-To build only this repository’s packages:
+3) Activate the virtual environment:
 
 ```bash
-colcon build --packages-select controller_reader kimera_vio_bringup
+source .venv/bin/activate
 ```
 
-## Hardware and udev
-
-![](./hardware/UMI-Dex_Dual%20IMU%20and%20encoder%20reading.step.jpg) ![](./hardware/L6-TG-STEP/L6-TG-Preview.png)
-
-For CAD/PCB assets (STEP, EasyEDA), see [Hardware documentation](#hardware-documentation) above.
-
-The 6-DOF encoders use a CH343 USB–serial bridge. For a stable device path on each plug-in, use the udev rule shipped with `controller_reader`:
+4) Download the ORB-SLAM3 vocabulary into `config/` (first run only):
 
 ```bash
-cd src/controller_reader/script
-sudo bash bind_usb.sh
+curl -L "https://github.com/UZ-SLAMLab/ORB_SLAM3/raw/master/Vocabulary/ORBvoc.txt.tar.gz" -o ./config/ORBvoc.txt.tar.gz
+tar -xzf ./config/ORBvoc.txt.tar.gz -C ./config
+rm ./config/ORBvoc.txt.tar.gz
 ```
 
-This installs `l6encoder_usb.rules` under `/etc/udev/rules.d/` so CH343 devices get a symlink at `/dev/l6encoder_usb`. Set `serial_port` to `/dev/l6encoder_usb` in `src/controller_reader/config/controller_reader_params.yaml`.
+## Main Workflow (Recommended)
 
-## Run
-
-Use several terminals and start the following in order.
-
-### 1. Controller / encoder node
+1) Start interactive recording (script entry):
 
 ```bash
-source install/setup.bash
-ros2 launch controller_reader controller_reader.launch.py
+uv run python script/interactive_record.py \
+  --vocab ./config/ORBvoc.txt \
+  --settings ./config/intel_d455.yaml \
+  --out_dir ./outputs/realtime_map
 ```
 
-Override the serial port from the launch file:
+2) Visualize trajectory (script entry):
 
 ```bash
-ros2 launch controller_reader controller_reader.launch.py serial_port:=/dev/ttyUSB1
+MPLCONFIGDIR="$(pwd)/.mplcache" uv run python script/visualize_trajectory.py \
+  --traj ./outputs/realtime_map/trajectory.txt \
+  --points ./outputs/realtime_map/tracked_points.xyz \
+  --out_dir ./outputs/realtime_map/plots \
+  --traj_only
 ```
 
-If launch fails, check serial devices: `ls /dev/tty*`.
-
-### 2. RealSense + Kimera-VIO
+3) Optional: align trajectory with controller data:
 
 ```bash
-source install/setup.bash
-ros2 launch kimera_vio_bringup d455_kimera_vio.launch.py
+uv run align-trajectory \
+  --traj ./outputs/realtime_map/trajectory.txt \
+  --controller ./outputs/realtime_map/controller_angles.csv \
+  --out ./outputs/realtime_map/trajectory_controller_aligned.csv
 ```
 
-Useful launch arguments (see [d455_kimera_vio.launch.py](src/kimera_vio_bringup/launch/d455_kimera_vio.launch.py)):
+## Interactive Recording Controls (Terminal)
 
-| Argument | Description |
-|----------|-------------|
-| `use_stereo:=true` | Enable stereo IR (infra1 + infra2) |
-| `rviz_enable:=true` | Start RViz2 |
-| `kimera_package:=...` | Kimera ROS 2 package name (default `kimera_vio_ros`) |
-| `kimera_executable:=...` | Node executable (default `kimera_vio_ros_node`) |
-| `kimera_params_file:=/abs/path.yaml` | Kimera parameter file |
-
-Ensure your Kimera pipeline publishes (or is remapped to) **`/poseimu`** as `geometry_msgs/PoseWithCovarianceStamped` before starting the capture script.
-
-### 3. Topic capture
+Start command:
 
 ```bash
-cd script
-python3 ros_topic_capture_save.py
+uv run record-interactive \
+  --vocab ./config/ORBvoc.txt \
+  --settings ./config/intel_d455.yaml \
+  --out_dir ./outputs/realtime_map
 ```
 
-Common options:
+Key bindings:
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-o DIR` | Output directory | `output_topics_YYYYMMDD_HHMMSS` |
-| `-t SEC` | Duration in seconds; `0` = stop with Ctrl+C | `0` |
-| `--no-pose` | Do not subscribe to `/poseimu` | — |
-| `--no-controller` | Do not subscribe to `/controller/angles` | — |
+- `s`: start recording
+- `c`: stop current recording and save outputs
+- `r`: delete/reset previous output directory contents (destructive)
+- `q`: quit controller
 
-## Topics and CSV output
+Notes:
 
-### ROS 2 topics
+- `r` is disabled while recording; press `c` first.
+- The interactive controller spawns `orb_runner` as a child process and performs safe shutdown on stop.
+- Interactive mode suppresses normal `orb_runner` logs and only forwards warning/error/traceback output.
+- Launcher implementation is in `script/interactive_record.py`.
 
-| Topic | Type | Description |
-|-------|------|-------------|
-| `/controller/angles` | `std_msgs/Float32MultiArray` | 6-DOF joint angle mapped values (0–1023) |
-| `/controller/angles_raw` | `std_msgs/Float32MultiArray` | Raw 6-DOF angles (can be disabled via params) |
-| `/poseimu` | `geometry_msgs/PoseWithCovarianceStamped` | 6DoF pose for capture (from your VIO / bridge) |
+## Debug/Development Commands (Advanced)
 
-### CSV output
+Use these for direct `orb_runner` testing and low-level troubleshooting:
 
-The capture script writes two CSV files in the output directory:
+```bash
+uv run orb-run \
+  --vocab ./config/ORBvoc.txt \
+  --settings ./config/intel_d455.yaml \
+  --out_dir ./outputs/realtime_map \
+  --disable_controller_capture
+```
 
-**pose_imu.csv**
+```bash
+uv run orb-run \
+  --vocab ./config/ORBvoc.txt \
+  --settings ./config/intel_d455.yaml \
+  --out_dir ./outputs/realtime_map \
+  --controller_port /dev/l6encoder_usb
+```
 
-| Column | Description |
-|--------|-------------|
-| `timestamp_sec`, `timestamp_nsec` | Timestamp from the pose message header (`msg.header.stamp`) |
-| `pos_x`, `pos_y`, `pos_z` | Position |
-| `orient_x`, `orient_y`, `orient_z`, `orient_w` | Orientation quaternion |
+Other retained wrapper commands:
 
-**controller_angles.csv**
+```bash
+uv run record-interactive --help
+uv run visualize-trajectory --help
+uv run record-realsense --out ./recordings/session_001
+```
 
-| Column | Description |
-|--------|-------------|
-| `timestamp_sec`, `timestamp_nsec` | Local clock when the node received the sample (`node.get_clock().now()`) |
-| `angle_0` – `angle_5` | Mapped control values for six joints |
+## Sample Data (Coming Soon)
 
-> **Note:** The two CSVs use different timestamp sources. `pose_imu.csv` uses the VIO/pose message `header.stamp`; `controller_angles.csv` uses the node’s local clock because encoder messages do not carry a standard timestamp header. Account for this when aligning data.
+Public high-quality sample data will be released after the current device/data pipeline reaches target quality criteria.
 
-## Contributing
+## Output Files (`--out_dir`)
 
-We welcome contributions of all kinds! Please read our [Contributing Guide](CONTRIBUTING.md) to get started.
+- `trajectory.txt`
+- `tracked_points.xyz`
+- `map_info.json`
+- `export_summary.json`
+- `orb_frame_times.csv`
+- `run_clock_info.csv`
+- `controller_angles.csv` (generated when controller capture is enabled)
 
-- [Code of Conduct](CODE_OF_CONDUCT.md) — community standards we uphold
-- [Security Policy](SECURITY.md) — how to report vulnerabilities privately
+## Usage Notes and Troubleshooting
 
-## License
+- Linux serial permissions: if controller connection fails, verify serial permissions (`dialout` group or udev rules).
+- If `orbslam3` import fails, rerun `uv sync` and verify your `uv` environment.
+- Use `--disable_controller_capture` for trajectory-only tests.
+- In restricted environments, use `MPLCONFIGDIR="$(pwd)/.mplcache"` for visualization.
 
-This project is licensed under the [Apache License 2.0](LICENSE).
+## Project Layout
+
+- Pipeline code: `src/linker_umi_dex/`
+- Interactive recorder launcher: `script/interactive_record.py`
+- Trajectory visualization script: `script/visualize_trajectory.py`
+- ORB resources/config: `config/intel_d455.yaml`, `config/ORBvoc.txt`
+- Runtime outputs: `outputs/`, `recordings/`
+
+## License Notes
+
+- Project code is licensed under [Apache License 2.0](LICENSE).
+- Third-party dependencies (including ORB-SLAM3 and `orbslam3-python`) follow their respective licenses.
