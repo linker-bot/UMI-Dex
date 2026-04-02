@@ -165,4 +165,5 @@ uv run record-realsense --out ./recordings/session_001
 ## 许可证说明
 
 - 本项目基于 [Apache License 2.0](LICENSE) 开源，希望整个行业和生态越来越好 ❤️
-- 第三方依赖（含 ORB-SLAM3 与 `orbslam3-python`）遵循各自许可证要求。
+- 第三方依赖（含 ORB-SLAM3 与 `orbslam3-python`）遵循各自许可证要求，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- ORB-SLAM3 采用 GPL-3.0 许可证。如果你分发包含 ORB-SLAM3 或其编译绑定的二进制文件、容器镜像或集成产品，须遵守 GPL-3.0 义务（提供源码、附带许可证文本等）。

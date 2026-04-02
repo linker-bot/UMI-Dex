@@ -165,4 +165,5 @@ Public high-quality sample data will be released after the current device/data p
 ## License Notes
 
 - Project code is licensed under [Apache License 2.0](LICENSE).
-- Third-party dependencies (including ORB-SLAM3 and `orbslam3-python`) follow their respective licenses.
+- Third-party dependencies (including ORB-SLAM3 and `orbslam3-python`) follow their respective licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for details.
+- ORB-SLAM3 is licensed under GPL-3.0. If you redistribute binaries, containers, or integrated products that include ORB-SLAM3 or its compiled bindings, you must comply with GPL-3.0 obligations (source availability, license inclusion, etc.).
