@@ -1,2 +1,0 @@
-KERNEL=="ttyCH343USB*", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d3", MODE:="0777", SYMLINK+="l6encoder_usb"
-

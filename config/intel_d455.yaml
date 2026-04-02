@@ -1,0 +1,77 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Intel RealSense D455 (factory parameters) for ORB-SLAM3 Stereo-Inertial
+# Source: rs-enumerate-devices -c (848x480 IR1/IR2)
+#--------------------------------------------------------------------------------------------
+File.version: "1.0"
+
+Camera.type: "Rectified"
+
+# Rectified left IR camera intrinsics (Infrared 1 @ 848x480, Y8)
+Camera1.fx: 431.678192138672
+Camera1.fy: 431.678192138672
+Camera1.cx: 425.379211425781
+Camera1.cy: 242.438476562500
+
+# Baseline magnitude from "Infrared 1 -> Infrared 2":
+# translation = [-0.0950354114, 0, 0] meters
+Stereo.b: 0.0950354114174843
+
+# Camera resolution
+Camera.width: 848
+Camera.height: 480
+
+# Camera frames per second
+Camera.fps: 30
+
+# Color order (ignored for grayscale images)
+Camera.RGB: 1
+
+# Close/far threshold in baseline units
+Stereo.ThDepth: 40.0
+
+# Transformation from body-frame (IMU) to left camera
+# ORB-SLAM3 calibration tutorial defines IMU.T_b_c1 as Camera1 -> IMU transform.
+# From rs-enumerate-devices: "Extrinsic from Infrared 1 To Gyro"
+IMU.T_b_c1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [1.0, 0.0, 0.0, -0.0302200000733137,
+          0.0, 1.0, 0.0,  0.00740000000223517,
+          0.0, 0.0, 1.0,  0.0160199999809265,
+          0.0, 0.0, 0.0,  1.0]
+
+# Do not insert KFs when recently lost
+IMU.InsertKFsWhenLost: 0
+
+# IMU noise parameters (starting point; tune/replace with Allan or Kalibr results)
+IMU.NoiseGyro: 1e-3
+IMU.NoiseAcc: 1e-2
+IMU.GyroWalk: 1e-6
+IMU.AccWalk: 1e-4
+IMU.Frequency: 200.0
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+ORBextractor.nFeatures: 1250
+ORBextractor.scaleFactor: 1.2
+ORBextractor.nLevels: 8
+ORBextractor.iniThFAST: 20
+ORBextractor.minThFAST: 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -3.5
+Viewer.ViewpointF: 500.0

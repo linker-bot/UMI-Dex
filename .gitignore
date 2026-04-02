@@ -24,12 +24,18 @@ venv/
 Thumbs.db
 
 # Runtime capture outputs
+outputs/
+recordings/
+Linker_UD/outputs/
+Linker_UD/recordings/
 output_topics_*/
-script/**/output_topics_*/
-script/**/controller_angles.csv
-script/**/pose_imu.csv
-sample_data/**/controller_angles.csv
-sample_data/**/pose_imu.csv
+# sample_data/**/controller_angles.csv
+# sample_data/**/pose_imu.csv
+legacy/
+
+# Large ORB vocabulary asset (download locally)
+config/ORBvoc.txt
+config/ORBvoc.txt.tar.gz
 
 # Accidental nested git repository artifacts
 script/.git/

@@ -1,7 +1,11 @@
-# Python dependencies for project scripts/packages.
-# ROS2 message/client libraries (rclpy, std_msgs, geometry_msgs, nav_msgs) are
-# installed from ROS2 apt packages, not via pip.
+# Compatibility requirements file.
+# Preferred workflow is uv + pyproject.toml: run `uv sync`.
 
+numpy>=1.24
+opencv-python>=4.8
+matplotlib>=3.7
+pyrealsense2
+orbslam3-python
 pyserial>=3.5
 
 # Optional test tooling
