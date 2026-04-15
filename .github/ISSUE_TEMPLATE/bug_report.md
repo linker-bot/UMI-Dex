@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a problem with UMI-Dex (ROS 2 dexterous-hand teleoperation data collection)
+about: Report a problem with UMI-Dex (ROS1 recorder + Python trajectory utilities)
 title: "[Bug] "
 labels:
   - bug
@@ -27,14 +27,14 @@ assignees: []
 
 ## Environment
 
-- **ROS 2 distro** (e.g. Humble, Jazzy):
-- **OS** (e.g. Ubuntu 22.04):
+- **ROS distro** (if recorder related, e.g. Noetic):
+- **OS** (e.g. Ubuntu 20.04):
 - **Python version**:
 - **Hardware setup** (e.g. hand model, cameras, host machine):
 
 ## Logs
 
-<!-- Paste relevant terminal output, stack traces, or `ros2` / node logs. Use code blocks. -->
+<!-- Paste relevant terminal output, stack traces, or `roslaunch` / node logs. Use code blocks. -->
 
 ```
 ```

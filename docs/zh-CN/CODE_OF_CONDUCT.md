@@ -1,6 +1,6 @@
 # 贡献者公约行为准则
 
-**UMI-Dex** 是由 **Linkerbot** 维护的 ROS 2 灵巧手遥操作数据采集栈。本项目采用 **Apache License 2.0** 授权。社区参与遵循 **Contributor Covenant 2.1**（贡献者公约）。
+**UMI-Dex** 是由 **Linkerbot** 维护的灵巧手遥操作数据采集栈，当前采用 ROS1 录制与 Python 分析工具并行的架构。本项目采用 **Apache License 2.0** 授权。社区参与遵循 **Contributor Covenant 2.1**（贡献者公约）。
 
 **其它语言版本：**见 [文档索引](../README.md)。
 

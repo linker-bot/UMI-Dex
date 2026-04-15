@@ -1,12 +1,13 @@
 # Compatibility requirements file.
 # Preferred workflow is uv + pyproject.toml: run `uv sync`.
+# Keep this list aligned with `pyproject.toml` for non-uv users.
 
 numpy>=1.24
 opencv-python>=4.8
 matplotlib>=3.7
 pyrealsense2
 orbslam3-python
-pyserial>=3.5
+python-can>=4.6.1
 
 # Optional test tooling
 pytest>=7.0

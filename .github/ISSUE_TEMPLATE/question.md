@@ -17,8 +17,8 @@ assignees: []
 
 ## Environment
 
-- **ROS 2 distro** (e.g. Humble, Jazzy):
-- **OS** (e.g. Ubuntu 22.04):
+- **ROS distro** (if recorder related, e.g. Noetic):
+- **OS** (e.g. Ubuntu 20.04):
 - **Python version** (if relevant):
 - **Hardware setup** (e.g. hand, sensors):
 

@@ -1,0 +1,265 @@
+#!/usr/bin/env python
+"""Interactive capture controller for rosbag recording sessions."""
+
+import datetime
+import glob
+import os
+import select
+import shlex
+import signal
+import subprocess
+import sys
+from typing import List, Optional
+
+import rosbag
+import rospy
+
+
+class InteractiveRecorder:
+    """CLI-driven rosbag recording lifecycle manager."""
+
+    def __init__(self):
+        self.bag_dir = os.path.abspath(rospy.get_param("~bag_dir", "outputs"))
+        self.base_name = rospy.get_param("~base_name", "capture")
+        self.prompt_interval = float(rospy.get_param("~prompt_interval_sec", 0.5))
+        self.topics = rospy.get_param("~topics", [])
+
+        if not isinstance(self.topics, list) or not self.topics:
+            raise ValueError("~topics must be a non-empty list of topic names")
+
+        self.record_proc: Optional[subprocess.Popen] = None
+        self.active_prefix: Optional[str] = None
+
+    def run(self):
+        os.makedirs(self.bag_dir, exist_ok=True)
+        self._print_help()
+        self._print_status()
+
+        while not rospy.is_shutdown():
+            cmd = self._read_command()
+            if cmd is None:
+                continue
+
+            if cmd == "s":
+                self._start_recording()
+            elif cmd == "c":
+                self._stop_recording(discard=False)
+            elif cmd == "r":
+                self._delete_last_recording()
+            elif cmd == "l":
+                self._list_recordings()
+            elif cmd == "q":
+                self._quit()
+                return
+            else:
+                print("Unknown command. Use: s(start), c(stop), r(remove last), l(list), q(quit)")
+
+            self._print_status()
+
+        # ROS shutdown signal: stop ongoing recording and keep data.
+        self._stop_recording(discard=False)
+
+    def _print_help(self):
+        print("")
+        print("Interactive capture ready.")
+        print("Commands:")
+        print("  s : start new recording")
+        print("  c : stop current recording")
+        print("  r : delete last finished recording")
+        print("  l : list recordings with per-topic stats")
+        print("  q : quit (discard active recording if running)")
+        print("")
+
+    def _print_status(self):
+        state = "recording" if self._is_recording() else "standby"
+        print("[state] {} | bag_dir={}".format(state, self.bag_dir))
+
+    def _read_command(self) -> Optional[str]:
+        sys.stdout.write("> ")
+        sys.stdout.flush()
+        while not rospy.is_shutdown():
+            ready, _, _ = select.select([sys.stdin], [], [], self.prompt_interval)
+            if not ready:
+                continue
+            line = sys.stdin.readline()
+            if line == "":
+                return "q"
+            return line.strip().lower()
+        return None
+
+    def _recording_prefix(self) -> str:
+        stamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        return os.path.join(self.bag_dir, "{}_{}".format(self.base_name, stamp))
+
+    def _start_recording(self):
+        if self._is_recording():
+            print("Recording already active.")
+            return
+
+        self.active_prefix = self._recording_prefix()
+        cmd = ["rosbag", "record", "-O", self.active_prefix] + self.topics
+        print("Starting recording:")
+        print("  {}".format(" ".join(shlex.quote(part) for part in cmd)))
+
+        self.record_proc = subprocess.Popen(
+            cmd,
+            preexec_fn=os.setsid,
+        )
+
+    def _stop_recording(self, discard: bool):
+        if not self._is_recording():
+            print("No active recording.")
+            return
+
+        assert self.record_proc is not None
+        assert self.active_prefix is not None
+
+        print("Stopping recording...")
+        try:
+            os.killpg(os.getpgid(self.record_proc.pid), signal.SIGINT)
+        except ProcessLookupError:
+            pass
+        try:
+            self.record_proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            print("Recorder did not stop in time; terminating.")
+            try:
+                os.killpg(os.getpgid(self.record_proc.pid), signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            self.record_proc.wait(timeout=5)
+
+        if discard:
+            self._delete_by_prefix(self.active_prefix)
+            print("Discarded active recording.")
+        else:
+            saved = self._bags_from_prefix(self.active_prefix)
+            if saved:
+                print("Saved recording:")
+                for path in saved:
+                    print("  {}".format(path))
+                    self._print_bag_summary(path, indent="    ")
+            else:
+                print("Recording stopped. No bag file found.")
+
+        self.record_proc = None
+        self.active_prefix = None
+
+    def _delete_by_prefix(self, prefix: str):
+        candidates = sorted(glob.glob(prefix + "*"))
+        if not candidates:
+            return
+        for path in candidates:
+            if os.path.isfile(path):
+                os.remove(path)
+
+    def _bags_from_prefix(self, prefix: str) -> List[str]:
+        return sorted(
+            path
+            for path in glob.glob(prefix + "*")
+            if path.endswith(".bag") and os.path.isfile(path)
+        )
+
+    def _list_recordings(self):
+        bags = self._all_bags()
+        if not bags:
+            print("No recordings found.")
+            return
+        print("Recordings:")
+        for bag in bags:
+            self._print_bag_summary(bag, indent="  ")
+
+    def _all_bags(self) -> List[str]:
+        return sorted(
+            glob.glob(os.path.join(self.bag_dir, "*.bag")),
+            key=os.path.getmtime,
+        )
+
+    def _delete_last_recording(self):
+        bags = self._all_bags()
+        if not bags:
+            print("No finished recording to delete.")
+            return
+        last = bags[-1]
+        os.remove(last)
+        print("Deleted: {}".format(last))
+
+    def _quit(self):
+        if self._is_recording():
+            self._stop_recording(discard=True)
+        print("Exiting interactive capture controller.")
+
+    def _is_recording(self) -> bool:
+        if self.record_proc is None:
+            return False
+        if self.record_proc.poll() is None:
+            return True
+        self.record_proc = None
+        self.active_prefix = None
+        return False
+
+    def _print_bag_summary(self, bag_path: str, indent: str = ""):
+        summary = self._summarize_bag(bag_path)
+        if summary is None:
+            print("{}{} (summary unavailable)".format(indent, os.path.basename(bag_path)))
+            return
+
+        print(
+            "{}{} | messages={} | duration={:.3f}s".format(
+                indent,
+                os.path.basename(bag_path),
+                summary["total_messages"],
+                summary["duration_sec"],
+            )
+        )
+        for topic, count, freq in summary["topic_stats"]:
+            freq_text = "{:.2f}".format(freq) if freq > 0.0 else "n/a"
+            print(
+                "{}  - {}: count={} rate={} Hz/FPS".format(
+                    indent, topic, count, freq_text
+                )
+            )
+
+    def _summarize_bag(self, bag_path: str):
+        try:
+            with rosbag.Bag(bag_path, "r") as bag:
+                info = bag.get_type_and_topic_info()
+                duration_sec = max(0.0, bag.get_end_time() - bag.get_start_time())
+        except Exception as exc:
+            rospy.logwarn("Failed to summarize bag %s: %s", bag_path, exc)
+            return None
+
+        topics = info.topics if hasattr(info, "topics") else {}
+        topic_stats = []
+        total_messages = 0
+        for topic in sorted(topics.keys()):
+            topic_info = topics[topic]
+            count = int(getattr(topic_info, "message_count", 0))
+            total_messages += count
+            freq = getattr(topic_info, "frequency", None)
+            if (freq is None or freq <= 0.0) and duration_sec > 0.0 and count > 1:
+                freq = float(count) / duration_sec
+            if freq is None:
+                freq = 0.0
+            topic_stats.append((topic, count, float(freq)))
+
+        return {
+            "duration_sec": duration_sec,
+            "total_messages": total_messages,
+            "topic_stats": topic_stats,
+        }
+
+
+def main():
+    rospy.init_node("interactive_capture", anonymous=False)
+    try:
+        recorder = InteractiveRecorder()
+    except ValueError as exc:
+        rospy.logfatal(str(exc))
+        return
+
+    recorder.run()
+
+
+if __name__ == "__main__":
+    main()

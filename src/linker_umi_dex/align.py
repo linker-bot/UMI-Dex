@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 """Align ORB trajectory outputs with controller samples in time."""
 
 import argparse
@@ -41,12 +41,12 @@ def _read_controller(path: str) -> Tuple[List[float], List[List[str]]]:
                     r["raw_3"],
                     r["raw_4"],
                     r["raw_5"],
-                    r["mapped_0"],
-                    r["mapped_1"],
-                    r["mapped_2"],
-                    r["mapped_3"],
-                    r["mapped_4"],
-                    r["mapped_5"],
+                    r["thumb_roll"],
+                    r["thumb_pitch"],
+                    r["index_pitch"],
+                    r["middle_pitch"],
+                    r["ring_pitch"],
+                    r["pinky_pitch"],
                 ]
             )
     return times, rows
@@ -102,12 +102,12 @@ def main() -> int:
                 "ctrl_raw_3",
                 "ctrl_raw_4",
                 "ctrl_raw_5",
-                "ctrl_mapped_0",
-                "ctrl_mapped_1",
-                "ctrl_mapped_2",
-                "ctrl_mapped_3",
-                "ctrl_mapped_4",
-                "ctrl_mapped_5",
+                "ctrl_thumb_roll",
+                "ctrl_thumb_pitch",
+                "ctrl_index_pitch",
+                "ctrl_middle_pitch",
+                "ctrl_ring_pitch",
+                "ctrl_pinky_pitch",
                 "match_abs_dt_s",
             ]
         )

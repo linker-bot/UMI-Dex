@@ -1,0 +1,21 @@
+<launch>
+  <!--
+    Play back a capture bag.
+    Usage: roslaunch linker_umi_dex playback.launch bag:=/path/to/capture.bag
+  -->
+  <arg name="bag" />
+  <arg name="rate"  default="1.0" />
+  <arg name="loop"  default="false" />
+  <arg name="start" default="0.0" />
+  <arg name="pause" default="false" />
+
+  <param name="/use_sim_time" value="true" />
+
+  <node pkg="rosbag" type="play" name="bag_player" output="screen"
+        args="$(arg bag)
+              --clock
+              -r $(arg rate)
+              -s $(arg start)
+              --loop=$(arg loop)
+              --pause=$(arg pause)" />
+</launch>

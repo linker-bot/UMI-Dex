@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+"""CLI tool: extract data from a capture rosbag into CSVs.
+
+Usage (standalone, no roscore needed):
+    ./bag_extract_node --bag /path/to/capture.bag --out_dir /path/to/output
+
+Or via rosrun:
+    rosrun linker_umi_dex bag_extract_node _bag:=/path/to/capture.bag
+"""
+
+import argparse
+import os
+import sys
+
+from linker_umi_dex.bag_utils import extract_controller_csv, extract_image_timestamps
+from linker_umi_dex.can_protocol import JOINT_NAMES
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Extract capture bag into CSVs")
+    parser.add_argument("--bag", required=True, help="Path to the .bag file")
+    parser.add_argument("--out_dir", default=".", help="Output directory for CSVs")
+    parser.add_argument("--controller_topic", default="/hand/joint_states",
+                        help="HandJointState topic name")
+    parser.add_argument("--ir1_topic", default="/camera/infra1/image_rect_raw",
+                        help="IR1 image topic")
+    parser.add_argument("--ir2_topic", default="/camera/infra2/image_rect_raw",
+                        help="IR2 image topic")
+    args = parser.parse_args()
+
+    os.makedirs(args.out_dir, exist_ok=True)
+
+    print(f"Extracting controller joints from {args.controller_topic} ...")
+    ctrl_path = os.path.join(args.out_dir, "controller_angles.csv")
+    n = extract_controller_csv(args.bag, ctrl_path, topic=args.controller_topic)
+    print(f"  -> {n} rows written to {ctrl_path}")
+
+    for name, topic in [("ir1", args.ir1_topic), ("ir2", args.ir2_topic)]:
+        csv_path = os.path.join(args.out_dir, f"{name}_timestamps.csv")
+        print(f"Extracting {name} timestamps from {topic} ...")
+        n = extract_image_timestamps(args.bag, csv_path, topic=topic)
+        print(f"  -> {n} rows written to {csv_path}")
+
+    print("Done.")
+
+
+if __name__ == "__main__":
+    main()

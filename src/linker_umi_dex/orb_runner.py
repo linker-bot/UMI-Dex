@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: Apache-2.0
 """Realtime ORB-SLAM3 runner."""
 
 import argparse
@@ -56,8 +56,8 @@ def main() -> int:
     ap.add_argument("--accel_fps", type=int, default=200)
     ap.add_argument("--max_seconds", type=float, default=0.0, help="0 means run until Ctrl+C")
     ap.add_argument("--out_dir", default="./outputs/realtime_map")
-    ap.add_argument("--controller_port", default="/dev/l6encoder_usb")
-    ap.add_argument("--controller_baudrate", type=int, default=115200)
+    ap.add_argument("--controller_channel", default="can0")
+    ap.add_argument("--controller_bustype", default="socketcan")
     ap.add_argument("--controller_timeout", type=float, default=0.1)
     ap.add_argument("--controller_filter_alpha", type=float, default=0.3)
     ap.add_argument("--controller_disable_filter", action="store_true")
@@ -96,8 +96,8 @@ def main() -> int:
     controller_enabled = not args.disable_controller_capture
     if controller_enabled:
         controller_reader = ControllerReader(
-            port=args.controller_port,
-            baudrate=args.controller_baudrate,
+            channel=args.controller_channel,
+            interface=args.controller_bustype,
             timeout=args.controller_timeout,
             enable_filter=not args.controller_disable_filter,
             filter_alpha=args.controller_filter_alpha,
@@ -111,7 +111,10 @@ def main() -> int:
             controller_logger.start()
             print(f"[controller] logging enabled: {controller_csv_path}")
         else:
-            msg = f"[controller] failed to connect on {args.controller_port}"
+            msg = (
+                f"[controller] failed to connect on "
+                f"{args.controller_channel} ({args.controller_bustype})"
+            )
             if args.controller_required:
                 raise RuntimeError(msg)
             print(msg + " (continuing without controller logging)")

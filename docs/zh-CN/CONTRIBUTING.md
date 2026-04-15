@@ -23,7 +23,7 @@
 
 请使用 [Bug 报告](https://github.com/linkerbot/dex-umi/issues/new?template=bug_report.md) Issue 模板，并提供：
 
-- ROS 2 发行版与操作系统版本
+- ROS 发行版与操作系统版本（录制相关问题建议写明 Noetic + Ubuntu 20.04）
 - 硬件配置（相机型号、编码器版本）
 - 问题复现步骤
 - 相关日志或 CSV 片段
@@ -47,29 +47,38 @@
 git clone <your-fork-url>
 cd <repo-root>
 
-# 安装 ROS 2 依赖
-source /opt/ros/jazzy/setup.bash
+# 安装 ROS1 依赖
+source /opt/ros/noetic/setup.bash
 
-# 编译
-colcon build --packages-select controller_reader kimera_vio_bringup
-source install/setup.bash
+# 编译 ROS 包
+mkdir -p ~/catkin_ws/src
+ln -s "$(pwd)/ros" ~/catkin_ws/src/linker_umi_dex
+cd ~/catkin_ws && catkin_make
+source devel/setup.bash
+cd <repo-root>
 
 # 安装 Python 开发依赖
-pip install -r requirements.txt
+uv sync
 ```
 
 ### 运行测试
 
 ```bash
-colcon test --packages-select controller_reader kimera_vio_bringup
-colcon test-result --verbose
+cd ~/catkin_ws && catkin_make
+source devel/setup.bash
+roslaunch linker_umi_dex capture.launch
+
+# Python 工具检查
+cd <repo-root>
+uv run align-trajectory --help
+uv run visualize-trajectory --help
 ```
 
 ## Pull Request 流程
 
 1. **Fork** 本仓库，从 `main` 分支创建功能分支。
 2. **实现变更** —— 每个 PR 只关注一个主题。
-3. **本地测试**（`colcon build && colcon test`）。
+3. **本地测试**（ROS 部分用 `catkin_make` / `roslaunch`，Python 工具用 `uv run ...`）。
 4. 如果变更影响用户体验，请**同步更新文档**。
 5. 使用 [PR 模板](../../.github/PULL_REQUEST_TEMPLATE.md) **提交 Pull Request**。
 6. 确保所有 CI 检查通过后，再请求 Review。
@@ -84,9 +93,9 @@ colcon test-result --verbose
 
 ## 代码规范
 
-- **Python**：遵循 PEP 8，项目使用 `ament_flake8` 和 `ament_pep257` 进行检查。
-- **ROS 2**：遵循 [ROS 2 开发者指南](https://docs.ros.org/en/rolling/The-ROS2-Project/Contributing/Developer-Guide.html)。
-- **Launch 文件**：使用 Python 格式的 `.launch.py` 文件。
+- **Python**：遵循 PEP 8，保证命令行工具可脚本化且文档清晰。
+- **ROS 1**：遵循 ROS Noetic/catkin 的命名与参数约定。
+- **Launch 文件**：使用 `ros/launch/` 下的 ROS1 XML `.launch` 文件。
 - **配置文件**：参数文件使用 YAML 格式，放置在 `config/` 下。
 
 ## 提交信息规范
@@ -104,9 +113,8 @@ colcon test-result --verbose
 示例：
 
 ```
-feat: add configurable baud rate for encoder serial port
+feat: add configurable CAN filter smoothing parameter
 
-Allow users to override the default 115200 baud rate via
-controller_reader_params.yaml for compatibility with
-third-party encoder hardware.
+Expose filter alpha in controller launch defaults to
+improve joint angle stability across different hands.
 ```

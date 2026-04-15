@@ -1,4 +1,4 @@
-# ROS2 / colcon build outputs
+# Build outputs
 /build/
 /install/
 /log/
@@ -14,10 +14,12 @@ __pycache__/
 htmlcov/
 .venv/
 venv/
+.mplcache/
 
 # IDE / editor
 .vscode/
 .idea/
+.cursor/
 
 # OS files
 .DS_Store
@@ -32,12 +34,12 @@ output_topics_*/
 # sample_data/**/controller_angles.csv
 # sample_data/**/pose_imu.csv
 legacy/
+.catkin_workspace
 
 # Large ORB vocabulary asset (download locally)
 config/ORBvoc.txt
 config/ORBvoc.txt.tar.gz
 
-# Accidental nested git repository artifacts
-script/.git/
-
-GAP_BASELINE.md
+# ROS Files
+*.pyc
+*.egg-info/

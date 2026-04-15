@@ -1,0 +1,21 @@
+<launch>
+  <!-- D405 color stream + camera info via realsense2_camera. -->
+  <arg name="serial_no" default="" />
+  <arg name="camera_name" default="camera_d405" />
+  <arg name="device_type" default="D405" />
+
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+    <arg name="serial_no"       value="$(arg serial_no)" />
+    <arg name="device_type"     value="$(arg device_type)" />
+    <arg name="camera"          value="$(arg camera_name)" />
+    <arg name="enable_color"    value="true" />
+    <arg name="color_width"     value="640" />
+    <arg name="color_height"    value="480" />
+    <arg name="color_fps"       value="30" />
+    <arg name="enable_depth"    value="false" />
+    <arg name="enable_infra1"   value="false" />
+    <arg name="enable_infra2"   value="false" />
+    <arg name="enable_gyro"     value="false" />
+    <arg name="enable_accel"    value="false" />
+  </include>
+</launch>

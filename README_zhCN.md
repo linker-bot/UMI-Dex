@@ -4,45 +4,48 @@
 
 **文档与语言：** [English](README.md) · 简体中文（本页）· [文档索引](docs/README.md)
 
-UMI-Dex 是一套面向灵巧手遥操作的数据采集流水线：通过同构手套（USB 串口编码器）与视觉惯性里程计（VIO）同步记录操作者的手部关节角度与末端位姿，输出统一时间轴对齐的数据文件，用于后续模仿学习、动作回放与数据处理。
+UMI-Dex 是一套开源的灵巧手遥操作数据采集与轨迹分析项目，用于统一记录多传感器数据并支持后续模仿学习和数据处理。
 
-当前项目实现采用 **Intel RealSense D455 + ORB-SLAM3（stereo-inertial）** 的 PC 侧本地采集方案（`uv` 管理 Python 工作流），直接在采集进程内完成轨迹估计与时间同步导出，不依赖 `kimera_vio_ros` 或 `/poseimu` 话题桥接。
+## 架构说明
 
-## 当前功能（PC）
+当前项目分为两层：
 
-- RealSense D455 双目 IR + IMU 采集
-- ORB-SLAM3 双目惯性轨迹估计
-- USB 控制器角度采集（原始值 + 映射值）
-- 轨迹与控制器数据离线对齐与可视化
+- **ROS1 录制流水线（标准录制入口）：** `ros/`
+  - 采集 D455 双目 IR + IMU、D405 彩色图像、CAN 手部关节角
+  - 所有数据写入同一 rosbag，共享 ROS 时间基准
+  - 提供交互式录制控制（`s/c/r/l/q`）
+- **Python ORB-SLAM3 工具（分析与调试）：** `src/linker_umi_dex/`
+  - ORB 运行/调试：`orb-run`
+  - 轨迹可视化：`visualize-trajectory`
+  - 轨迹与控制器对齐：`align-trajectory`
 
-## 环境要求
+## 快速开始
+
+### 1) ROS1 录制环境（推荐用于正式采集）
+
+请直接参考 ROS 指南：
+
+- [ros/README.md](ros/README.md)
+
+该文档包含 Noetic 依赖、catkin 工作空间、launch 方式和录制流程。
+
+### 2) Python 工具环境（ORB + 可视化 + 对齐）
+
+前置要求：
 
 - Python 3.12+
-- 已安装 `uv`（推荐）
-- Intel RealSense D455（运行采集时需要）
-- 可选控制器串口设备（默认 `/dev/l6encoder_usb`）
+- 已安装 `uv`
+- 建议在 Linux 环境使用 `orbslam3-python`（预编译 wheel 兼容性更好）
 
-## 环境准备
-
-1) 如果未安装 `uv`，先安装：
+安装：
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-2) 创建并同步项目环境：
-
-```bash
 uv sync
-```
-
-3) 激活虚拟环境：
-
-```bash
 source .venv/bin/activate
 ```
 
-4) 下载 ORB-SLAM3 词典到 `config/`（首次执行一次即可）：
+如果 `config/ORBvoc.txt` 不存在，首次执行一次：
 
 ```bash
 curl -L "https://github.com/UZ-SLAMLab/ORB_SLAM3/raw/master/Vocabulary/ORBvoc.txt.tar.gz" -o ./config/ORBvoc.txt.tar.gz
@@ -50,28 +53,19 @@ tar -xzf ./config/ORBvoc.txt.tar.gz -C ./config
 rm ./config/ORBvoc.txt.tar.gz
 ```
 
-## 主流程（推荐）
+## Python 工具命令
 
-1) 启动交互式录制（脚本入口）：
-
-```bash
-uv run python script/interactive_record.py \
-  --vocab ./config/ORBvoc.txt \
-  --settings ./config/intel_d455.yaml \
-  --out_dir ./outputs/realtime_map
-```
-
-2) 轨迹可视化（脚本入口）：
+轨迹可视化：
 
 ```bash
-MPLCONFIGDIR="$(pwd)/.mplcache" uv run python script/visualize_trajectory.py \
+MPLCONFIGDIR="$(pwd)/.mplcache" uv run visualize-trajectory \
   --traj ./outputs/realtime_map/trajectory.txt \
   --points ./outputs/realtime_map/tracked_points.xyz \
   --out_dir ./outputs/realtime_map/plots \
   --traj_only
 ```
 
-3) 可选：轨迹与控制器数据对齐：
+轨迹与控制器数据对齐：
 
 ```bash
 uv run align-trajectory \
@@ -80,90 +74,38 @@ uv run align-trajectory \
   --out ./outputs/realtime_map/trajectory_controller_aligned.csv
 ```
 
-## 交互式录制控制（终端）
-
-启动命令：
-
-```bash
-uv run record-interactive \
-  --vocab ./config/ORBvoc.txt \
-  --settings ./config/intel_d455.yaml \
-  --out_dir ./outputs/realtime_map
-```
-
-按键说明：
-
-- `s`：开始录制
-- `c`：停止当前录制并保存输出
-- `r`：删除/重置上一次输出目录内容（危险操作）
-- `q`：退出控制器
-
-说明：
-
-- 录制进行中不允许执行 `r`，请先按 `c` 停止。
-- 交互式控制器会以子进程方式启动 `orb_runner`，并在停止时执行安全退出流程。
-- 交互模式下会屏蔽 `orb_runner` 的常规日志，仅保留 warning/error/traceback 等异常输出。
-- 启动器实现源码位于 `script/interactive_record.py`。
-
-## 调试/开发命令（进阶）
-
-用于直接测试 `orb_runner` 与底层排障：
+ORB 运行/调试：
 
 ```bash
 uv run orb-run \
   --vocab ./config/ORBvoc.txt \
   --settings ./config/intel_d455.yaml \
   --out_dir ./outputs/realtime_map \
-  --disable_controller_capture
+  --controller_channel can0 \
+  --controller_bustype socketcan
 ```
 
-```bash
-uv run orb-run \
-  --vocab ./config/ORBvoc.txt \
-  --settings ./config/intel_d455.yaml \
-  --out_dir ./outputs/realtime_map \
-  --controller_port /dev/l6encoder_usb
-```
+## 说明与排障
 
-其他保留的开发封装命令：
-
-```bash
-uv run record-interactive --help
-uv run visualize-trajectory --help
-uv run record-realsense --out ./recordings/session_001
-```
-
-## 示例数据（即将发布）
-
-公开高质量示例数据将在当前设备与数据链路达到目标质量标准后发布。
-
-## 输出文件（`--out_dir`）
-
-- `trajectory.txt`
-- `tracked_points.xyz`
-- `map_info.json`
-- `export_summary.json`
-- `orb_frame_times.csv`
-- `run_clock_info.csv`
-- `controller_angles.csv`（启用控制器采集时生成）
-
-## 使用说明与排障建议
-
-- Linux 串口权限：若控制器连接失败，请检查串口权限（`dialout` 用户组或 udev 规则）。
-- 若 `orbslam3` 导入失败，请重新执行 `uv sync` 并检查 `uv` 环境是否正常。
-- 仅轨迹测试可使用 `--disable_controller_capture`。
-- 在受限环境中可视化建议使用 `MPLCONFIGDIR="$(pwd)/.mplcache"`。
+- 正式录制建议使用 ROS1 流程；Python 命令主要用于分析和调试。
+- 控制器默认使用 SocketCAN（`can0`），不使用旧的串口录制入口。
+- 若 `orbslam3` 导入失败，请在项目根目录重新执行 `uv sync`。
+- 在受限环境中绘图建议设置 `MPLCONFIGDIR="$(pwd)/.mplcache"`。
 
 ## 项目结构
 
-- 流水线代码：`src/linker_umi_dex/`
-- 交互式录制启动器：`script/interactive_record.py`
-- 轨迹可视化脚本：`script/visualize_trajectory.py`
-- ORB 资源/配置：`config/intel_d455.yaml`、`config/ORBvoc.txt`
+- 录制包：`ros/`
+- Python 包：`src/linker_umi_dex/`
+- 可视化脚本（仓库便捷入口）：`script/visualize_trajectory.py`
+- 相机与 ORB 配置：`config/`
 - 运行输出：`outputs/`、`recordings/`
+
+## 示例数据
+
+公开示例数据将在数据质量达到发布标准后提供。
 
 ## 许可证说明
 
-- 本项目基于 [Apache License 2.0](LICENSE) 开源，希望整个行业和生态越来越好 ❤️
+- 本项目基于 [Apache License 2.0](LICENSE) 开源。
 - 第三方依赖（含 ORB-SLAM3 与 `orbslam3-python`）遵循各自许可证要求，详见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 - ORB-SLAM3 采用 GPL-3.0 许可证。如果你分发包含 ORB-SLAM3 或其编译绑定的二进制文件、容器镜像或集成产品，须遵守 GPL-3.0 义务（提供源码、附带许可证文本等）。

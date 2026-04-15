@@ -4,6 +4,6 @@ __all__ = [
     "controller_capture",
     "orb_runner",
     "align",
-    "visualize",
-    "record_realsense",
+    "visualize_trajectory",
+    "wrapper",
 ]
