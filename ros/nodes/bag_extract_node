@@ -5,15 +5,15 @@ Usage (standalone, no roscore needed):
     ./bag_extract_node --bag /path/to/capture.bag --out_dir /path/to/output
 
 Or via rosrun:
-    rosrun linker_umi_dex bag_extract_node _bag:=/path/to/capture.bag
+    rosrun umi_dex bag_extract_node _bag:=/path/to/capture.bag
 """
 
 import argparse
 import os
 import sys
 
-from linker_umi_dex.bag_utils import extract_controller_csv, extract_image_timestamps
-from linker_umi_dex.can_protocol import JOINT_NAMES
+from umi_dex.bag_utils import extract_controller_csv, extract_image_timestamps
+from umi_dex.can_protocol import JOINT_NAMES
 
 
 def main():

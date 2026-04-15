@@ -1,6 +1,6 @@
 """CAN 0x112 three-part frame assembly and circular low-pass filter.
 
-Ported from src/linker_umi_dex/controller_capture.py for use in the
+Ported from src/umi_dex/controller_capture.py for use in the
 ROS1 capture pipeline.  This module has *no* ROS dependency so it can
 be unit-tested standalone.
 """

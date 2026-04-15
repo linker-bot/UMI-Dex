@@ -6,14 +6,14 @@ import struct
 
 import rospy
 
-from linker_umi_dex.can_protocol import (
+from umi_dex.can_protocol import (
     CanAssembler,
     CircularFilter,
     JOINT_NAMES,
     NUM_JOINTS,
 )
-from linker_umi_dex.calibration import Calibrator
-from linker_umi_dex.msg import HandJointState
+from umi_dex.calibration import Calibrator
+from umi_dex.msg import HandJointState
 
 
 # ---------- low-level SocketCAN helpers ----------

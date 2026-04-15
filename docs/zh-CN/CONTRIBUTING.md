@@ -21,7 +21,7 @@
 
 ### 报告 Bug
 
-请使用 [Bug 报告](https://github.com/linkerbot/dex-umi/issues/new?template=bug_report.md) Issue 模板，并提供：
+请使用 [Bug 报告](../../.github/ISSUE_TEMPLATE/bug_report.md) Issue 模板，并提供：
 
 - ROS 发行版与操作系统版本（录制相关问题建议写明 Noetic + Ubuntu 20.04）
 - 硬件配置（相机型号、编码器版本）
@@ -30,11 +30,11 @@
 
 ### 功能建议
 
-请使用 [功能请求](https://github.com/linkerbot/dex-umi/issues/new?template=feature_request.md) Issue 模板，描述你要解决的问题和建议方案。
+请使用 [功能请求](../../.github/ISSUE_TEMPLATE/feature_request.md) Issue 模板，描述你要解决的问题和建议方案。
 
 ### 提问
 
-请使用 [提问](https://github.com/linkerbot/dex-umi/issues/new?template=question.md) Issue 模板来提出使用问题、集成帮助或一般讨论。
+请使用 [提问](../../.github/ISSUE_TEMPLATE/question.md) Issue 模板来提出使用问题、集成帮助或一般讨论。
 
 ### 改进文档
 
@@ -52,7 +52,7 @@ source /opt/ros/noetic/setup.bash
 
 # 编译 ROS 包
 mkdir -p ~/catkin_ws/src
-ln -s "$(pwd)/ros" ~/catkin_ws/src/linker_umi_dex
+ln -s "$(pwd)/ros" ~/catkin_ws/src/umi_dex
 cd ~/catkin_ws && catkin_make
 source devel/setup.bash
 cd <repo-root>
@@ -66,7 +66,7 @@ uv sync
 ```bash
 cd ~/catkin_ws && catkin_make
 source devel/setup.bash
-roslaunch linker_umi_dex capture.launch
+roslaunch umi_dex capture.launch
 
 # Python 工具检查
 cd <repo-root>

@@ -1,7 +1,7 @@
 <launch>
   <!--
     Play back a capture bag.
-    Usage: roslaunch linker_umi_dex playback.launch bag:=/path/to/capture.bag
+    Usage: roslaunch umi_dex playback.launch bag:=/path/to/capture.bag
   -->
   <arg name="bag" />
   <arg name="rate"  default="1.0" />

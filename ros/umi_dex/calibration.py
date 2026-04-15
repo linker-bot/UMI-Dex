@@ -1,6 +1,6 @@
 """Joint angle calibration: raw encoder counts -> actual angles (0-100).
 
-Ported from src/linker_umi_dex/controller_capture.py.  No ROS dependency.
+Ported from src/umi_dex/controller_capture.py.  No ROS dependency.
 """
 
 import csv

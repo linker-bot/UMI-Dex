@@ -14,7 +14,7 @@ UMI-Dex is split into two clear layers:
   - Captures D455 stereo IR + IMU, D405 color, and CAN hand joint states
   - Records synchronized streams into rosbag with a shared ROS clock
   - Provides interactive recording controls (`s/c/r/l/q`)
-- **Python ORB-SLAM3 utilities (analysis and tooling):** `src/linker_umi_dex/`
+- **Python ORB-SLAM3 utilities (analysis and tooling):** `src/umi_dex/`
   - ORB runtime/debug command: `orb-run`
   - Trajectory visualization: `visualize-trajectory`
   - Trajectory/controller alignment: `align-trajectory`
@@ -95,7 +95,7 @@ uv run orb-run \
 ## Project Layout
 
 - Recorder package: `ros/`
-- Python package: `src/linker_umi_dex/`
+- Python package: `src/umi_dex/`
 - Visualization CLI script (repo convenience entry): `script/visualize_trajectory.py`
 - Camera/ORB configuration: `config/`
 - Runtime outputs: `outputs/`, `recordings/`

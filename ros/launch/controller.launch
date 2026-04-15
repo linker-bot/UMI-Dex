@@ -1,11 +1,11 @@
 <launch>
   <!-- CAN controller node (standalone). -->
   <arg name="can_channel"     default="can0" />
-  <arg name="calibration_csv" default="$(find linker_umi_dex)/config/calibration.csv" />
+  <arg name="calibration_csv" default="$(find umi_dex)/config/calibration.csv" />
   <arg name="filter_alpha"    default="0.3" />
   <arg name="enable_filter"   default="true" />
 
-  <node pkg="linker_umi_dex" type="can_controller_node" name="can_controller"
+  <node pkg="umi_dex" type="can_controller_node" name="can_controller"
         output="screen">
     <param name="can_channel"     value="$(arg can_channel)" />
     <param name="calibration_csv" value="$(arg calibration_csv)" />

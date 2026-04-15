@@ -1,4 +1,4 @@
-# linker_umi_dex — ROS1 Capture Package
+# umi_dex — ROS1 Capture Package
 
 ROS Noetic (Python) package for synchronized data capture from:
 
@@ -24,7 +24,7 @@ All streams are recorded into a single **rosbag** with a shared ROS clock, elimi
 mkdir -p ~/catkin_ws/src && cd ~/catkin_ws/src
 
 # 2. Symlink this package into the workspace.
-ln -s /path/to/Linker-UMI-Dex/ros linker_umi_dex
+ln -s /path/to/UMI-Dex/ros umi_dex
 
 # 3. Build.
 cd ~/catkin_ws
@@ -36,13 +36,13 @@ source devel/setup.bash
 
 ## Output directories
 
-`rosbag record` does **not** create missing parent directories. Default `bag_dir` is `$(find linker_umi_dex)/../../outputs`, which is usually **two levels above the `ros/` package** — e.g. the **git repo root** if that is where `../../` lands, or **`~/catkin_ws`** if the package is `~/catkin_ws/src/linker_umi_dex`. Create those directories before capture:
+`rosbag record` does **not** create missing parent directories. Default `bag_dir` is `$(find umi_dex)/../../outputs`, which is usually **two levels above the `ros/` package** — e.g. the **git repo root** if that is where `../../` lands, or **`~/catkin_ws`** if the package is `~/catkin_ws/src/umi_dex`. Create those directories before capture:
 
 ```bash
 # Example: ros/ lives at /path/to/UMI-Dex/ros
 cd /path/to/UMI-Dex && mkdir -p outputs recordings
 
-# Example: package is symlinked as ~/catkin_ws/src/linker_umi_dex → .../UMI-Dex/ros
+# Example: package is symlinked as ~/catkin_ws/src/umi_dex → .../UMI-Dex/ros
 mkdir -p ~/catkin_ws/outputs ~/catkin_ws/recordings
 ```
 
@@ -60,7 +60,7 @@ sudo ip link set can0 up type can bitrate 1000000
 #   ros/config/camera_serials.conf
 #
 # Launch all streams + interactive recorder.
-roslaunch linker_umi_dex capture.launch
+roslaunch umi_dex capture.launch
 
 # After launch, use interactive commands:
 #   s : start new recording
@@ -74,25 +74,25 @@ roslaunch linker_umi_dex capture.launch
 
 ```bash
 # D455 camera only
-roslaunch linker_umi_dex d455.launch
+roslaunch umi_dex d455.launch
 
 # CAN controller only
-roslaunch linker_umi_dex controller.launch
+roslaunch umi_dex controller.launch
 
 # Override defaults (optional; config file is used by default)
-roslaunch linker_umi_dex capture.launch can_channel:=can1 filter_alpha:=0.5 d405_serial:=123456
+roslaunch umi_dex capture.launch can_channel:=can1 filter_alpha:=0.5 d405_serial:=123456
 ```
 
 ### Play back a bag
 
 ```bash
-roslaunch linker_umi_dex playback.launch bag:=/path/to/capture_2025-04-10.bag
+roslaunch umi_dex playback.launch bag:=/path/to/capture_2025-04-10.bag
 ```
 
 ### Extract CSVs from a bag
 
 ```bash
-rosrun linker_umi_dex bag_extract_node \
+rosrun umi_dex bag_extract_node \
     --bag /path/to/capture.bag \
     --out_dir /path/to/output
 ```
@@ -113,7 +113,7 @@ This produces:
 | `/camera/imu` | `sensor_msgs/Imu` | 200 Hz | realsense2_camera |
 | `/camera_d405/color/image_raw` | `sensor_msgs/Image` | 30 Hz | realsense2_camera |
 | `/camera_d405/color/camera_info` | `sensor_msgs/CameraInfo` | 30 Hz | realsense2_camera |
-| `/hand/joint_states` | `linker_umi_dex/HandJointState` | ~100 Hz | can_controller_node |
+| `/hand/joint_states` | `umi_dex/HandJointState` | ~100 Hz | can_controller_node |
 
 ## Custom Message: HandJointState
 
@@ -147,7 +147,7 @@ ros/
 │   ├── can_controller_node  # CAN → ROS publisher
 │   ├── interactive_capture_node  # CLI recorder controller
 │   └── bag_extract_node     # bag → CSV extractor
-└── linker_umi_dex/
+└── umi_dex/
     ├── __init__.py
     ├── can_protocol.py      # CAN 0x112 frame assembly
     ├── calibration.py       # raw count → actual angle mapping

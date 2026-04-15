@@ -14,7 +14,7 @@ UMI-Dex 是一套开源的灵巧手遥操作数据采集与轨迹分析项目，
   - 采集 D455 双目 IR + IMU、D405 彩色图像、CAN 手部关节角
   - 所有数据写入同一 rosbag，共享 ROS 时间基准
   - 提供交互式录制控制（`s/c/r/l/q`）
-- **Python ORB-SLAM3 工具（分析与调试）：** `src/linker_umi_dex/`
+- **Python ORB-SLAM3 工具（分析与调试）：** `src/umi_dex/`
   - ORB 运行/调试：`orb-run`
   - 轨迹可视化：`visualize-trajectory`
   - 轨迹与控制器对齐：`align-trajectory`
@@ -95,7 +95,7 @@ uv run orb-run \
 ## 项目结构
 
 - 录制包：`ros/`
-- Python 包：`src/linker_umi_dex/`
+- Python 包：`src/umi_dex/`
 - 可视化脚本（仓库便捷入口）：`script/visualize_trajectory.py`
 - 相机与 ORB 配置：`config/`
 - 运行输出：`outputs/`、`recordings/`

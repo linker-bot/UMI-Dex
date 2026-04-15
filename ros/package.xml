@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>linker_umi_dex</name>
+  <name>umi_dex</name>
   <version>0.1.0</version>
   <description>
-    ROS1 capture pipeline for the Linker UMI Dex hand controller.
+    ROS1 capture pipeline for the UMI-Dex hand controller.
     Publishes CAN-based joint angles and orchestrates D455/D405
     interactive recording via rosbag.
   </description>

@@ -21,7 +21,7 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 
 ### Reporting Bugs
 
-Use the [Bug Report](https://github.com/linkerbot/dex-umi/issues/new?template=bug_report.md) issue template. Include:
+Use the [Bug Report](../../.github/ISSUE_TEMPLATE/bug_report.md) issue template. Include:
 
 - ROS distro and OS version (for recorder issues, e.g. Noetic + Ubuntu 20.04)
 - Hardware setup (camera model, encoder version)
@@ -30,11 +30,11 @@ Use the [Bug Report](https://github.com/linkerbot/dex-umi/issues/new?template=bu
 
 ### Suggesting Features
 
-Use the [Feature Request](https://github.com/linkerbot/dex-umi/issues/new?template=feature_request.md) issue template. Describe the problem you're trying to solve and your proposed approach.
+Use the [Feature Request](../../.github/ISSUE_TEMPLATE/feature_request.md) issue template. Describe the problem you're trying to solve and your proposed approach.
 
 ### Asking Questions
 
-Use the [Question](https://github.com/linkerbot/dex-umi/issues/new?template=question.md) issue template for usage questions, integration help, or general discussion.
+Use the [Question](../../.github/ISSUE_TEMPLATE/question.md) issue template for usage questions, integration help, or general discussion.
 
 ### Improving Documentation
 
@@ -52,7 +52,7 @@ source /opt/ros/noetic/setup.bash
 
 # Build ROS package
 mkdir -p ~/catkin_ws/src
-ln -s "$(pwd)/ros" ~/catkin_ws/src/linker_umi_dex
+ln -s "$(pwd)/ros" ~/catkin_ws/src/umi_dex
 cd ~/catkin_ws && catkin_make
 source devel/setup.bash
 cd <repo-root>
@@ -66,7 +66,7 @@ uv sync
 ```bash
 cd ~/catkin_ws && catkin_make
 source devel/setup.bash
-roslaunch linker_umi_dex capture.launch
+roslaunch umi_dex capture.launch
 
 # Python utility checks
 cd <repo-root>
