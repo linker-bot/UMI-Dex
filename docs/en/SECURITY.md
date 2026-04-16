@@ -1,6 +1,6 @@
 # Security policy
 
-**UMI-Dex** is a ROS 2 dexterous-hand teleoperation data stack maintained by **Linkerbot**. This project is licensed under [Apache 2.0](../../LICENSE).
+**UMI-Dex** is a dexterous-hand teleoperation data stack maintained by **Linkerbot**, with ROS1 recording and Python analysis utilities. This project is licensed under [Apache 2.0](../../LICENSE).
 
 **Other locales:** [documentation hub](../README.md)
 
@@ -10,7 +10,7 @@
 
 | Version | Supported | Notes |
 |---------|-----------|-------|
-| **v1.0.0** | Yes | Tested on **ROS 2 Jazzy** |
+| **v1.0.0** | Yes | Tested on **ROS1 Noetic** + Python utilities (`uv`) |
 
 Older or unreleased versions may not receive security updates. Use the latest supported release when possible.
 
@@ -35,7 +35,7 @@ To help us assess and fix the issue, please include where possible:
 1. **Description** — What the issue is and where it occurs (component, file, or node if known).
 2. **Impact** — Potential effects (e.g. data exposure, device control, denial of service).
 3. **Steps to reproduce** — Minimal steps or a safe proof of concept you can share.
-4. **Environment** — OS, ROS 2 distro (e.g. Jazzy), UMI-Dex version, and relevant hardware.
+4. **Environment** — OS, ROS distro (e.g. Noetic), Python version, UMI-Dex version, and relevant hardware.
 5. **Contact** — How we can follow up (email is enough).
 6. **Disclosure preferences** — Any timing requirements for coordinated disclosure.
 
@@ -70,11 +70,11 @@ Security review and response under this policy covers components of the UMI-Dex 
 
 | Area | Examples |
 |------|----------|
-| **ROS 2 nodes** | Node logic, parameters, topics/services/actions, launch and bringup affecting runtime. |
+| **ROS1 nodes** | Node logic, parameters, topics, launch flow, and bag recording behavior in `ros/`. |
 | **Serial I/O** | Serial interfaces and data handling for the hand, controller, or related devices. |
 | **Data scripts** | Scripts and pipelines that record or export teleop/sensor data. |
 
-**Typically out of scope** for this project’s process (you may still email for routing): third-party ROS packages unrelated to our patches, purely physical tampering assumptions, and issues only in upstream ROS 2 or the OS—unless they interact with our code in a clearly exploitable way.
+**Typically out of scope** for this project’s process (you may still email for routing): third-party ROS packages unrelated to our patches, purely physical tampering assumptions, and issues only in upstream ROS or the OS—unless they interact with our code in a clearly exploitable way.
 
 ---
 

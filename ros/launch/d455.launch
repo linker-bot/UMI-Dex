@@ -1,0 +1,23 @@
+<launch>
+  <!-- D455 stereo IR + IMU via the official realsense2_camera package. -->
+  <arg name="serial_no" default="" />
+  <arg name="device_type" default="D455" />
+
+  <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+    <arg name="serial_no"       value="$(arg serial_no)" />
+    <arg name="device_type"     value="$(arg device_type)" />
+    <arg name="enable_infra1"   value="true" />
+    <arg name="enable_infra2"   value="true" />
+    <arg name="infra_width"     value="848" />
+    <arg name="infra_height"    value="480" />
+    <arg name="infra_fps"       value="30" />
+    <arg name="enable_color"    value="false" />
+    <arg name="enable_depth"    value="false" />
+    <arg name="enable_gyro"     value="true" />
+    <arg name="enable_accel"    value="true" />
+    <arg name="gyro_fps"        value="200" />
+    <arg name="accel_fps"       value="200" />
+    <arg name="unite_imu_method" value="linear_interpolation" />
+    <arg name="enable_sync"     value="true" />
+  </include>
+</launch>

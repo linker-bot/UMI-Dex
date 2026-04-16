@@ -21,20 +21,20 @@ This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). By participating
 
 ### Reporting Bugs
 
-Use the [Bug Report](https://github.com/linkerbot/dex-umi/issues/new?template=bug_report.md) issue template. Include:
+Use the [Bug Report](../../.github/ISSUE_TEMPLATE/bug_report.md) issue template. Include:
 
-- ROS 2 distro and OS version
+- ROS distro and OS version (for recorder issues, e.g. Noetic + Ubuntu 20.04)
 - Hardware setup (camera model, encoder version)
 - Steps to reproduce the issue
 - Relevant log output or CSV snippets
 
 ### Suggesting Features
 
-Use the [Feature Request](https://github.com/linkerbot/dex-umi/issues/new?template=feature_request.md) issue template. Describe the problem you're trying to solve and your proposed approach.
+Use the [Feature Request](../../.github/ISSUE_TEMPLATE/feature_request.md) issue template. Describe the problem you're trying to solve and your proposed approach.
 
 ### Asking Questions
 
-Use the [Question](https://github.com/linkerbot/dex-umi/issues/new?template=question.md) issue template for usage questions, integration help, or general discussion.
+Use the [Question](../../.github/ISSUE_TEMPLATE/question.md) issue template for usage questions, integration help, or general discussion.
 
 ### Improving Documentation
 
@@ -47,29 +47,38 @@ Documentation fixes are always welcome — typos, clarity improvements, addition
 git clone <your-fork-url>
 cd <repo-root>
 
-# Install ROS 2 dependencies
-source /opt/ros/jazzy/setup.bash
+# Install ROS1 dependencies
+source /opt/ros/noetic/setup.bash
 
-# Build
-colcon build --packages-select controller_reader kimera_vio_bringup
-source install/setup.bash
+# Build ROS package
+mkdir -p ~/catkin_ws/src
+ln -s "$(pwd)/ros" ~/catkin_ws/src/umi_dex
+cd ~/catkin_ws && catkin_make
+source devel/setup.bash
+cd <repo-root>
 
 # Install Python dev dependencies
-pip install -r requirements.txt
+uv sync
 ```
 
 ### Running Tests
 
 ```bash
-colcon test --packages-select controller_reader kimera_vio_bringup
-colcon test-result --verbose
+cd ~/catkin_ws && catkin_make
+source devel/setup.bash
+roslaunch umi_dex capture.launch
+
+# Python utility checks
+cd <repo-root>
+uv run align-trajectory --help
+uv run visualize-trajectory --help
 ```
 
 ## Pull Request Process
 
 1. **Fork** the repository and create a feature branch from `main`.
 2. **Make your changes** — keep each PR focused on a single concern.
-3. **Test** your changes locally (`colcon build && colcon test`).
+3. **Test** your changes locally (`catkin_make` / `roslaunch` for ROS parts, `uv run ...` for Python tools).
 4. **Update documentation** if your change affects user-facing behavior.
 5. **Open a Pull Request** using the [PR template](../../.github/PULL_REQUEST_TEMPLATE.md).
 6. Ensure all CI checks pass before requesting review.
@@ -84,9 +93,9 @@ colcon test-result --verbose
 
 ## Coding Standards
 
-- **Python**: Follow PEP 8. The project uses `ament_flake8` and `ament_pep257` for linting.
-- **ROS 2**: Follow [ROS 2 developer guide](https://docs.ros.org/en/rolling/The-ROS2-Project/Contributing/Developer-Guide.html) conventions.
-- **Launch files**: Use Python-based launch files (`.launch.py`).
+- **Python**: Follow PEP 8 and keep CLIs scriptable and documented.
+- **ROS 1**: Follow ROS Noetic/catkin conventions for node names, topics, and parameters.
+- **Launch files**: Use ROS1 XML launch files under `ros/launch/`.
 - **Config files**: Use YAML for parameter files under `config/`.
 
 ## Commit Messages
@@ -103,9 +112,8 @@ Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
 
 Example:
 ```
-feat: add configurable baud rate for encoder serial port
+feat: add configurable CAN filter smoothing parameter
 
-Allow users to override the default 115200 baud rate via
-controller_reader_params.yaml for compatibility with
-third-party encoder hardware.
+Expose filter alpha in controller launch defaults to
+improve joint angle stability across different hands.
 ```

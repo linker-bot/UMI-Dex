@@ -1,0 +1,26 @@
+# realsense2_camera parameters for D455 stereo IR + IMU capture.
+# These are passed via <rosparam> in d455.launch.
+
+# Stereo infrared streams (for ORB-SLAM3 stereo-inertial).
+enable_infra1: true
+enable_infra2: true
+infra_width: 848
+infra_height: 480
+infra_fps: 30
+
+# Disable color and depth (not needed for stereo-inertial ORB-SLAM3).
+enable_color: false
+enable_depth: false
+
+# IMU (gyro + accel).
+enable_gyro: true
+enable_accel: true
+gyro_fps: 200
+accel_fps: 200
+unite_imu_method: "linear_interpolation"
+
+# Turn off the IR emitter for passive stereo.
+emitter_enabled: false
+
+# Use hardware timestamps when available.
+enable_sync: true

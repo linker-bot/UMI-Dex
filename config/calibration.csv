@@ -1,0 +1,7 @@
+joints, raw_angle_min, raw_angle_max, actual_angle_min, actual_angle_max
+thumb_roll, 316.7, 37.2, 100, 0
+thumb_pitch, 281.5, 328.2, 100, 0
+index_pitch, 215, 294.5, 100, 0
+middle_pitch, 231.3, 308.1, 100, 0
+ring_pitch, 69.6, 149.3, 100, 0
+pinky_pitch, 208.3, 286.6, 100, 0

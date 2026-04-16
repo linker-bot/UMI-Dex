@@ -3,10 +3,11 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "linker-umi-dex"
+name = "umi-dex"
 version = "0.1.0"
-description = "Python-first ORB-SLAM3 + controller capture pipeline"
+description = "ROS1 recording pipeline with ORB-SLAM3 analysis utilities"
 readme = "README.md"
+license = { text = "Apache-2.0" }
 requires-python = ">=3.12"
 dependencies = [
     "matplotlib>=3.7",
@@ -14,8 +15,7 @@ dependencies = [
     "opencv-python>=4.8",
     "orbslam3-python>=2.0.0",
     "pyrealsense2>=2.57.7.10387",
-    "pyserial>=3.5",
-    "pytest>=7.0",
+    "python-can>=4.6.1",
 ]
 
 [project.optional-dependencies]
@@ -24,11 +24,10 @@ dev = [
 ]
 
 [project.scripts]
-orb-run = "linker_umi_dex.orb_runner:main"
-align-trajectory = "linker_umi_dex.align:main"
-visualize-trajectory = "linker_umi_dex.wrapper.visualize:main"
-record-realsense = "linker_umi_dex.record_realsense:main"
-record-interactive = "linker_umi_dex.wrapper.interactive_record:main"
+orb-run = "umi_dex.orb_runner:main"
+capture-controller = "umi_dex.controller_capture:main"
+align-trajectory = "umi_dex.align:main"
+visualize-trajectory = "umi_dex.wrapper.visualize:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/linker_umi_dex"]
+packages = ["src/umi_dex"]

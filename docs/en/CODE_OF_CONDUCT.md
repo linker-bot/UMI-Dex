@@ -1,6 +1,6 @@
 # Contributor Covenant Code of Conduct
 
-**UMI-Dex** is a ROS 2 dexterous-hand teleoperation data stack maintained by **Linkerbot**. This project is licensed under **Apache License 2.0**. Community participation follows **Contributor Covenant 2.1**.
+**UMI-Dex** is a dexterous-hand teleoperation data stack maintained by **Linkerbot**, with ROS1 recording and Python analysis utilities. This project is licensed under **Apache License 2.0**. Community participation follows **Contributor Covenant 2.1**.
 
 **Other locales:** [documentation hub](../README.md)
 
