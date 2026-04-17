@@ -14,8 +14,54 @@ All streams are recorded into a single **rosbag** with a shared ROS clock, elimi
 |-----------|---------|
 | Ubuntu 20.04 | — |
 | ROS Noetic | `sudo apt install ros-noetic-desktop-full` |
-| RealSense ROS | `sudo apt install ros-noetic-realsense2-camera` |
+| RealSense ROS (D405 recommended) | Build `librealsense` + `realsense-ros` from source (see below) |
 | SocketCAN | Kernel built-in; configure with `sudo ip link set can0 up type can bitrate 1000000` |
+
+## Install librealsense + realsense-ros from source (recommended for D405)
+
+`ros-noetic-realsense2-camera` from apt can lag behind and may not include the D405 support/behavior you need.  
+For D405, install both `librealsense` and the ROS1 wrapper from source in this order:
+
+```bash
+# 0. Optional: remove apt ROS wrapper if already installed.
+sudo apt remove -y ros-noetic-realsense2-camera
+
+# 1. Build and install librealsense.
+sudo apt update
+sudo apt install -y \
+  git cmake build-essential pkg-config \
+  libssl-dev libusb-1.0-0-dev libgtk-3-dev \
+  libglfw3-dev libgl1-mesa-dev libglu1-mesa-dev
+
+cd ~
+git clone https://github.com/IntelRealSense/librealsense.git
+cd librealsense
+# Use a tag that supports your D405 firmware (replace if needed).
+git checkout v2.55.1
+
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DFORCE_RSUSB_BACKEND=ON -DBUILD_EXAMPLES=false
+make -j"$(nproc)"
+sudo make install
+sudo ldconfig
+
+# 2. Build ROS1 wrapper inside your catkin workspace.
+cd ~/catkin_ws/src
+git clone https://github.com/IntelRealSense/realsense-ros.git
+cd realsense-ros
+# ROS1 branch for Noetic users.
+git checkout ros1-legacy
+
+cd ~/catkin_ws
+rosdep install --from-paths src --ignore-src -r -y
+catkin_make -DCMAKE_BUILD_TYPE=Release
+source devel/setup.bash
+
+# 3. Verify ROS can find the wrapper package.
+rospack find realsense2_camera
+```
+
+If `rospack find realsense2_camera` succeeds, `roslaunch umi_dex capture.launch` can resolve RealSense dependencies.
 
 ## Setup
 
