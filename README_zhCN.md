@@ -18,6 +18,7 @@ UMI-Dex 是一套开源的灵巧手遥操作数据采集与轨迹分析项目，
   - ORB 运行/调试：`orb-run`
   - 轨迹可视化：`visualize-trajectory`
   - 轨迹与控制器对齐：`align-trajectory`
+  - `orb-run` 本分支改动与串口用法说明：[docs/orb_runner_changes_zh.md](docs/orb_runner_changes_zh.md)
 
 ## 快速开始
 
