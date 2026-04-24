@@ -75,7 +75,7 @@ uv run align-trajectory \
   --out ./outputs/realtime_map/trajectory_controller_aligned.csv
 ```
 
-ORB 运行/调试（默认用 SocketCAN `can0` 读手套控制器；无 CAN 可加 `--disable_controller_capture`；必须连上时加 `--controller_required`，见指南）：
+ORB 运行/调试（默认用 SocketCAN `can0` 读手套控制器；无 CAN 可加 `--disable_controller_capture`；必须连上时加 `--controller_required`，详见 [docs/orb_runner_guide.md](docs/orb_runner_guide.md)）：
 
 ```bash
 uv run orb-run \
@@ -87,7 +87,7 @@ uv run orb-run \
 ## 说明与排障
 
 - 正式录制建议使用 ROS1 流程；Python 命令主要用于分析和调试。
-- `orb-run` 的控制器角度经 **SocketCAN** 读取（默认 `can0` / `socketcan`）；可用 `--controller_channel` / `--controller_interface` 调整，或用 `--disable_controller_capture` 关闭录制（见 [指南](docs/orb_runner_guide.md)）。
+- `orb-run` 的控制器角度经 **SocketCAN** 读取（默认 `can0` / `socketcan`）；可用 `--controller_channel` / `--controller_bustype`（`python-can` 的 *bustype*，与库内 `interface` 一致）调整，或用 `--disable_controller_capture` 关闭录制（见 [指南](docs/orb_runner_guide.md)）。
 - 若 `orbslam3` 导入失败，请在项目根目录重新执行 `uv sync`。
 - 在受限环境中绘图建议设置 `MPLCONFIGDIR="$(pwd)/.mplcache"`。
 

@@ -37,7 +37,7 @@ uv run orb-run \
 - **（二）`not IMU meas` / `not enough acceleration`**  
   **多见于 VIBA 之前**；处理见下 **第 6 点**。本质是**补纹理 + 平滑平移激励**。  
 
-- **（三）`First KF:...; Map init KF:...` / `New Map created with N points`**（`N` 因场景/版本而变，文中 `466` 仅示例）  
+- **（三）`First KF:...; Map init KF:...` / `New Map created with N points`**（`N` 因场景/版本而变）  
   新地图与初值点已建立，多表示**视觉建图与跟踪已启动、状态正常向**。可继续在纹理好处平移。  
 
 - **（四）VIBA 1**  

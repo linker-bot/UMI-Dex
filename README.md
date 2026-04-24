@@ -18,7 +18,7 @@ UMI-Dex is split into two clear layers:
   - ORB runtime/debug command: `orb-run`
   - Trajectory visualization: `visualize-trajectory`
   - Trajectory/controller alignment: `align-trajectory`
-  - `orb-run` changes on this branch (RealSense sync, IMU, serial controller): [docs/orb_runner_guide.md](docs/orb_runner_guide.md)
+  - `orb-run` usage (RealSense sync, IMU, SocketCAN): [docs/orb_runner_guide.md](docs/orb_runner_guide.md)
 
 ## Quick Start
 
@@ -75,7 +75,7 @@ uv run align-trajectory \
   --out ./outputs/realtime_map/trajectory_controller_aligned.csv
 ```
 
-ORB runtime/debug (defaults: SocketCAN `can0` for the glove; use the guide to disable capture or require the bus):
+ORB runtime/debug (SocketCAN `can0` by default; add `--disable_controller_capture` if no CAN, or `--controller_required` to require the bus; see [docs/orb_runner_guide.md](docs/orb_runner_guide.md)):
 
 ```bash
 uv run orb-run \
@@ -87,7 +87,7 @@ uv run orb-run \
 ## Notes
 
 - Recording is ROS1-first; Python commands are utilities and debug tooling.
-- `orb-run` reads controller angles over **SocketCAN** (default `can0` / `socketcan`); override with `--controller_channel` / `--controller_interface`, or use `--disable_controller_capture` as needed ([guide](docs/orb_runner_guide.md)).
+- `orb-run` reads controller angles over **SocketCAN** (default `can0` / `socketcan`); override with `--controller_channel` / `--controller_bustype` (python-can *bustype*, same as the library’s `interface` argument), or use `--disable_controller_capture` as needed ([guide](docs/orb_runner_guide.md)).
 - If `orbslam3` import fails, run `uv sync` again in the project root.
 - In restricted environments, set `MPLCONFIGDIR="$(pwd)/.mplcache"` for plotting.
 
