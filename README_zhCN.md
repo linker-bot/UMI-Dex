@@ -18,7 +18,7 @@ UMI-Dex 是一套开源的灵巧手遥操作数据采集与轨迹分析项目，
   - ORB 运行/调试：`orb-run`
   - 轨迹可视化：`visualize-trajectory`
   - 轨迹与控制器对齐：`align-trajectory`
-  - `orb-run` 本分支改动与串口用法说明：[docs/orb_runner_changes_zh.md](docs/orb_runner_changes_zh.md)
+  - `orb-run` 代码的用法说明：[docs/orb_runner_guide.md](docs/orb_runner_guide.md)
 
 ## 快速开始
 
@@ -75,21 +75,19 @@ uv run align-trajectory \
   --out ./outputs/realtime_map/trajectory_controller_aligned.csv
 ```
 
-ORB 运行/调试：
+ORB 运行/调试（默认用 SocketCAN `can0` 读手套控制器；无 CAN 可加 `--disable_controller_capture`；必须连上时加 `--controller_required`，见指南）：
 
 ```bash
 uv run orb-run \
   --vocab ./config/ORBvoc.txt \
   --settings ./config/intel_d455.yaml \
-  --out_dir ./outputs/realtime_map \
-  --controller_channel can0 \
-  --controller_bustype socketcan
+  --out_dir ./outputs/realtime_map
 ```
 
 ## 说明与排障
 
 - 正式录制建议使用 ROS1 流程；Python 命令主要用于分析和调试。
-- 控制器默认使用 SocketCAN（`can0`），不使用旧的串口录制入口。
+- `orb-run` 的控制器角度经 **SocketCAN** 读取（默认 `can0` / `socketcan`）；可用 `--controller_channel` / `--controller_interface` 调整，或用 `--disable_controller_capture` 关闭录制（见 [指南](docs/orb_runner_guide.md)）。
 - 若 `orbslam3` 导入失败，请在项目根目录重新执行 `uv sync`。
 - 在受限环境中绘图建议设置 `MPLCONFIGDIR="$(pwd)/.mplcache"`。
 

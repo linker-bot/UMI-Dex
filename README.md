@@ -18,6 +18,7 @@ UMI-Dex is split into two clear layers:
   - ORB runtime/debug command: `orb-run`
   - Trajectory visualization: `visualize-trajectory`
   - Trajectory/controller alignment: `align-trajectory`
+  - `orb-run` changes on this branch (RealSense sync, IMU, serial controller): [docs/orb_runner_guide.md](docs/orb_runner_guide.md)
 
 ## Quick Start
 
@@ -74,21 +75,19 @@ uv run align-trajectory \
   --out ./outputs/realtime_map/trajectory_controller_aligned.csv
 ```
 
-ORB runtime/debug:
+ORB runtime/debug (defaults: SocketCAN `can0` for the glove; use the guide to disable capture or require the bus):
 
 ```bash
 uv run orb-run \
   --vocab ./config/ORBvoc.txt \
   --settings ./config/intel_d455.yaml \
-  --out_dir ./outputs/realtime_map \
-  --controller_channel can0 \
-  --controller_bustype socketcan
+  --out_dir ./outputs/realtime_map
 ```
 
 ## Notes
 
 - Recording is ROS1-first; Python commands are utilities and debug tooling.
-- Controller capture uses SocketCAN (`can0` by default).
+- `orb-run` reads controller angles over **SocketCAN** (default `can0` / `socketcan`); override with `--controller_channel` / `--controller_interface`, or use `--disable_controller_capture` as needed ([guide](docs/orb_runner_guide.md)).
 - If `orbslam3` import fails, run `uv sync` again in the project root.
 - In restricted environments, set `MPLCONFIGDIR="$(pwd)/.mplcache"` for plotting.
 
