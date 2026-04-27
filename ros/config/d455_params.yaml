@@ -24,3 +24,6 @@ emitter_enabled: false
 
 # Use hardware timestamps when available.
 enable_sync: true
+
+# Align camera and IMU clocks to the host system clock.
+global_time_enabled: true

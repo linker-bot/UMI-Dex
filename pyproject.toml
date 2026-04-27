@@ -4,18 +4,19 @@ build-backend = "hatchling.build"
 
 [project]
 name = "umi-dex"
-version = "0.1.0"
-description = "ROS1 recording pipeline with ORB-SLAM3 analysis utilities"
+version = "0.2.0"
+description = "Offline post-processing pipeline for ROS-recorded UMI-Dex bags: ORB-SLAM3 replay, CAN decoding, video encoding, and aligned dataset assembly."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.12"
 dependencies = [
-    "matplotlib>=3.7",
     "numpy>=1.24",
     "opencv-python>=4.8",
     "orbslam3-python>=2.0.0",
-    "pyrealsense2>=2.57.7.10387",
-    "python-can>=4.6.1",
+    "rosbags>=0.10",
+    "av>=12.0",
+    "pandas>=2.0",
+    "pyarrow>=14.0",
 ]
 
 [project.optional-dependencies]
@@ -24,10 +25,10 @@ dev = [
 ]
 
 [project.scripts]
-orb-run = "umi_dex.orb_runner:main"
-capture-controller = "umi_dex.controller_capture:main"
-align-trajectory = "umi_dex.align:main"
-visualize-trajectory = "umi_dex.wrapper.visualize:main"
+umi-inspect = "umi_dex.cli.inspect:main"
+umi-extract = "umi_dex.cli.extract:main"
+umi-slam = "umi_dex.cli.slam:main"
+umi-process = "umi_dex.cli.process:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/umi_dex"]

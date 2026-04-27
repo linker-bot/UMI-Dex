@@ -19,5 +19,6 @@
     <arg name="accel_fps"       value="200" />
     <arg name="unite_imu_method" value="linear_interpolation" />
     <arg name="enable_sync"     value="true" />
+    <arg name="initial_reset"   value="true" />
   </include>
 </launch>
