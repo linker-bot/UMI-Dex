@@ -38,19 +38,19 @@ IMU.T_b_c1: !!opencv-matrix
    rows: 4
    cols: 4
    dt: f
-   data: [1.0, 0.0, 0.0, -0.0302200000733137,
-          0.0, 1.0, 0.0,  0.00740000000223517,
-          0.0, 0.0, 1.0,  0.0160199999809265,
-          0.0, 0.0, 0.0,  1.0]
+   data: [ 0.9999989467, -0.0006166870,  0.0013138956, -0.0297399460,
+           0.0006211605,  0.9999940029, -0.0034070886,  0.0066065110,
+          -0.0013117866,  0.0034079011,  0.9999933327,  0.0188211730,
+           0.0000000000,  0.0000000000,  0.0000000000,  1.0000000000]
 
 # Do not insert KFs when recently lost
 IMU.InsertKFsWhenLost: 0
 
-# IMU noise parameters (starting point; tune/replace with Allan or Kalibr results)
-IMU.NoiseGyro: 1e-3
-IMU.NoiseAcc: 1e-2
-IMU.GyroWalk: 1e-6
-IMU.AccWalk: 1e-4
+# IMU 噪声参数（来源：Kalibr 标定输入，BMI088 数据手册）
+IMU.NoiseGyro: 1.6e-4   # rad/s/sqrt(Hz)
+IMU.NoiseAcc:  2.8e-3   # m/s^2/sqrt(Hz)
+IMU.GyroWalk:  2.2e-5   # rad/s^2/sqrt(Hz)
+IMU.AccWalk:   8.6e-4   # m/s^3/sqrt(Hz)
 IMU.Frequency: 200.0
 
 #--------------------------------------------------------------------------------------------
