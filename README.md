@@ -8,37 +8,30 @@ UMI-Dex is an open-source dexterous-hand teleoperation data pipeline for synchro
 
 ## Architecture
 
-UMI-Dex is split into two clear layers:
+UMI-Dex uses a **hybrid pipeline**: ROS records synchronized bags, Python processes them offline into client-ready datasets.
 
 - **ROS1 recording pipeline (canonical recorder):** `ros/`
-  - Captures D455 stereo IR + IMU, D405 color, and CAN hand joint states
+  - Captures D455 stereo IR + IMU, D405 color, and raw CAN hand frames
   - Records synchronized streams into rosbag with a shared ROS clock
   - Provides interactive recording controls (`s/c/r/l/q`)
-- **Python ORB-SLAM3 utilities (analysis and tooling):** `src/umi_dex/`
-  - ORB runtime/debug command: `orb-run`
-  - Trajectory visualization: `visualize-trajectory`
-  - Trajectory/controller alignment: `align-trajectory`
-  - `orb-run` usage (RealSense sync, IMU, SocketCAN): [docs/orb_runner_guide.md](docs/orb_runner_guide.md)
+  - Writes a session provenance sidecar (`<bag>.session.json`)
+- **Python 3.12+ offline pipeline:** `src/umi_dex/`
+  - `umi-inspect` — bag health check and topic summary
+  - `umi-extract` — CAN decode + calibrate to `controller.csv`, D405 to H.264 MP4
+  - `umi-slam` — offline ORB-SLAM3 replay producing trajectory + map
+  - `umi-process` — full pipeline: extract + SLAM + aligned dataset assembly
 
 ## Quick Start
 
-### 1) ROS1 capture setup (recommended for recording)
+### 1) ROS1 capture setup (recording)
 
-Use the ROS-specific guide:
+See [ros/README.md](ros/README.md) for Noetic dependencies, catkin workspace setup, launch files, and recording operations.
 
-- [ros/README.md](ros/README.md)
+Operator procedure (IMU warm-up, data collection): [docs/recording_sop.md](docs/recording_sop.md)
 
-It includes Noetic dependencies, catkin workspace setup, launch files, and recording operations.
+### 2) Python offline pipeline (processing)
 
-### 2) Python utilities setup (ORB + visualization + alignment)
-
-Prerequisites:
-
-- Python 3.12+
-- `uv`
-- Linux is recommended for `orbslam3-python` wheel compatibility
-
-Install:
+Prerequisites: Python 3.12+, `uv`, Linux, system FFmpeg.
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -54,54 +47,41 @@ tar -xzf ./config/ORBvoc.txt.tar.gz -C ./config
 rm ./config/ORBvoc.txt.tar.gz
 ```
 
-## Python Utility Commands
-
-Trajectory visualization:
+### 3) Process a recorded bag
 
 ```bash
-MPLCONFIGDIR="$(pwd)/.mplcache" uv run visualize-trajectory \
-  --traj ./outputs/realtime_map/trajectory.txt \
-  --points ./outputs/realtime_map/tracked_points.xyz \
-  --out_dir ./outputs/realtime_map/plots \
-  --traj_only
-```
+# Inspect the bag first
+uv run umi-inspect /path/to/capture.bag --check-topics
 
-Trajectory/controller alignment:
-
-```bash
-uv run align-trajectory \
-  --traj ./outputs/realtime_map/trajectory.txt \
-  --controller ./outputs/realtime_map/controller_angles.csv \
-  --out ./outputs/realtime_map/trajectory_controller_aligned.csv
-```
-
-ORB runtime/debug (SocketCAN `can0` by default; add `--disable_controller_capture` if no CAN, or `--controller_required` to require the bus; see [docs/orb_runner_guide.md](docs/orb_runner_guide.md)):
-
-```bash
-uv run orb-run \
+# Full pipeline: extract + SLAM + aligned dataset
+uv run umi-process /path/to/capture.bag \
   --vocab ./config/ORBvoc.txt \
   --settings ./config/intel_d455.yaml \
-  --out_dir ./outputs/realtime_map
+  --out sessions/my_session/
 ```
 
-## Notes
+Or run steps individually:
 
-- Recording is ROS1-first; Python commands are utilities and debug tooling.
-- `orb-run` reads controller angles over **SocketCAN** (default `can0` / `socketcan`); override with `--controller_channel` / `--controller_bustype` (python-can *bustype*, same as the library’s `interface` argument), or use `--disable_controller_capture` as needed ([guide](docs/orb_runner_guide.md)).
-- If `orbslam3` import fails, run `uv sync` again in the project root.
-- In restricted environments, set `MPLCONFIGDIR="$(pwd)/.mplcache"` for plotting.
+```bash
+# Extract only (controller CSV + D405 MP4, no SLAM)
+uv run umi-extract /path/to/capture.bag --out sessions/my_session/
+
+# SLAM only
+uv run umi-slam /path/to/capture.bag \
+  --vocab ./config/ORBvoc.txt \
+  --settings ./config/intel_d455.yaml \
+  --out sessions/my_session/
+```
+
+See [docs/processing.md](docs/processing.md) for full details and output layout.
 
 ## Project Layout
 
 - Recorder package: `ros/`
 - Python package: `src/umi_dex/`
-- Visualization CLI script (repo convenience entry): `script/visualize_trajectory.py`
 - Camera/ORB configuration: `config/`
-- Runtime outputs: `outputs/`, `recordings/`
-
-## Sample Data
-
-Public sample data will be released after data quality validation milestones are met.
+- Session outputs: `sessions/`
+- Documentation: `docs/`
 
 ## License
 

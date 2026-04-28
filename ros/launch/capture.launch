@@ -5,8 +5,6 @@
     Recording is controlled from the interactive CLI node (s/c/r/l/q).
   -->
   <arg name="can_channel"     default="can0" />
-  <arg name="calibration_csv" default="$(find umi_dex)/config/calibration.csv" />
-  <arg name="filter_alpha"    default="0.3" />
   <arg name="d455_serial"     default="$(eval dict([line.strip().split('=', 1) for line in open(find('umi_dex') + '/config/camera_serials.conf').read().splitlines() if line.strip() and not line.strip().startswith('#')])['d455_serial'])" />
   <arg name="d405_serial"     default="$(eval dict([line.strip().split('=', 1) for line in open(find('umi_dex') + '/config/camera_serials.conf').read().splitlines() if line.strip() and not line.strip().startswith('#')])['d405_serial'])" />
   <arg name="bag_dir"         default="$(find umi_dex)/../../outputs" />
@@ -21,16 +19,18 @@
     <arg name="serial_no" value="$(arg d405_serial)" />
   </include>
 
-  <!-- CAN controller -->
+  <!-- CAN raw frame publisher -->
   <include file="$(find umi_dex)/launch/controller.launch">
-    <arg name="can_channel"     value="$(arg can_channel)" />
-    <arg name="calibration_csv" value="$(arg calibration_csv)" />
-    <arg name="filter_alpha"    value="$(arg filter_alpha)" />
+    <arg name="can_channel" value="$(arg can_channel)" />
   </include>
+
+  <arg name="warmup_duration_s" default="15.0" />
 
   <node pkg="umi_dex" type="interactive_capture_node" name="interactive_capture" output="screen">
     <param name="bag_dir" value="$(arg bag_dir)" />
     <param name="base_name" value="capture" />
+    <param name="warmup_duration_s" value="$(arg warmup_duration_s)" />
+    <param name="episode_topic" value="/session/episode" />
     <rosparam param="topics">
       - /camera/infra1/image_rect_raw
       - /camera/infra1/camera_info
@@ -39,7 +39,8 @@
       - /camera/imu
       - /camera_d405/color/image_raw
       - /camera_d405/color/camera_info
-      - /hand/joint_states
+      - /hand/can_raw
+      - /session/episode
     </rosparam>
   </node>
 </launch>

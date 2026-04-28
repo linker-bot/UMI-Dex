@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 add_message_files(FILES
+  CanFrame.msg
   HandJointState.msg
 )
 
@@ -26,8 +27,7 @@ catkin_package(CATKIN_DEPENDS
 )
 
 catkin_install_python(PROGRAMS
-  nodes/can_controller_node
-  nodes/bag_extract_node
+  nodes/can_raw_node
   nodes/interactive_capture_node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
