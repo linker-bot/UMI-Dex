@@ -18,3 +18,10 @@ Policy and contributor guides live under **`docs/<locale>/`**, where `<locale>` 
 **Repository usage docs / 使用说明：** the main setup and run instructions are in the root [README.md](../README.md) and [README_zhCN.md](../README_zhCN.md); additional root `README_<locale>.md` files may appear over time.  
 
 **使用与构建说明：** 见仓库根目录 [README.md](../README.md)、[README_zhCN.md](../README_zhCN.md)；日后也可增加其它 `README_<locale>.md`。
+
+## Pipeline guides / 流水线指南
+
+| Doc | Description |
+|-----|-------------|
+| [recording_sop.md](recording_sop.md) | Operator procedure for ROS capture sessions (IMU warm-up, data collection) |
+| [processing.md](processing.md) | Offline Python pipeline: `umi-inspect`, `umi-extract`, `umi-slam`, `umi-process` |

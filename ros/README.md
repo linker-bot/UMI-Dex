@@ -4,9 +4,9 @@ ROS Noetic (Python) package for synchronized data capture from:
 
 - **Intel D455** — stereo IR (848x480 @ 30 fps) + IMU (gyro/accel @ 200 Hz)
 - **Intel D405** — color stream + camera info
-- **CAN controller** — 6-DOF hand joint angles via SocketCAN (CAN ID 0x112)
+- **CAN controller** — raw CAN frames via SocketCAN (CAN ID 0x112)
 
-All streams are recorded into a single **rosbag** with a shared ROS clock, eliminating the need for post-hoc timestamp alignment.
+All streams are recorded into a single **rosbag** with a shared ROS clock. CAN frame assembly, filtering, and calibration happen offline in the Python pipeline — the recorder captures raw frames only.
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ All streams are recorded into a single **rosbag** with a shared ROS clock, elimi
 
 ## Install librealsense + realsense-ros from source (recommended for D405)
 
-`ros-noetic-realsense2-camera` from apt can lag behind and may not include the D405 support/behavior you need.  
+`ros-noetic-realsense2-camera` from apt can lag behind and may not include the D405 support/behavior you need.
 For D405, install both `librealsense` and the ROS1 wrapper from source in this order:
 
 ```bash
@@ -36,7 +36,6 @@ sudo apt install -y \
 cd ~
 git clone https://github.com/IntelRealSense/librealsense.git
 cd librealsense
-# Use a tag that supports your D405 firmware (replace if needed).
 git checkout v2.55.1
 
 mkdir -p build && cd build
@@ -49,7 +48,6 @@ sudo ldconfig
 cd ~/catkin_ws/src
 git clone https://github.com/IntelRealSense/realsense-ros.git
 cd realsense-ros
-# ROS1 branch for Noetic users.
 git checkout ros1-legacy
 
 cd ~/catkin_ws
@@ -60,8 +58,6 @@ source devel/setup.bash
 # 3. Verify ROS can find the wrapper package.
 rospack find realsense2_camera
 ```
-
-If `rospack find realsense2_camera` succeeds, `roslaunch umi_dex capture.launch` can resolve RealSense dependencies.
 
 ## Setup
 
@@ -82,17 +78,11 @@ source devel/setup.bash
 
 ## Output directories
 
-`rosbag record` does **not** create missing parent directories. Default `bag_dir` is `$(find umi_dex)/../../outputs`, which is usually **two levels above the `ros/` package** — e.g. the **git repo root** if that is where `../../` lands, or **`~/catkin_ws`** if the package is `~/catkin_ws/src/umi_dex`. Create those directories before capture:
+`rosbag record` does **not** create missing parent directories. Default `bag_dir` is `$(find umi_dex)/../../outputs`. Create those directories before capture:
 
 ```bash
-# Example: ros/ lives at /path/to/UMI-Dex/ros
-cd /path/to/UMI-Dex && mkdir -p outputs recordings
-
-# Example: package is symlinked as ~/catkin_ws/src/umi_dex → .../UMI-Dex/ros
-mkdir -p ~/catkin_ws/outputs ~/catkin_ws/recordings
+cd /path/to/UMI-Dex && mkdir -p outputs
 ```
-
-If you set `bag_dir:=/somewhere/else`, create that path yourself before launching.
 
 ## Usage
 
@@ -116,37 +106,26 @@ roslaunch umi_dex capture.launch
 #   q : quit (if recording, stop and discard active bag)
 ```
 
+A `<bag>.session.json` sidecar is written at recording start with provenance anchors (ROS time, wall clock, host info).
+
 ### Launch individual components
 
 ```bash
 # D455 camera only
 roslaunch umi_dex d455.launch
 
-# CAN controller only
+# CAN raw frame publisher only
 roslaunch umi_dex controller.launch
 
-# Override defaults (optional; config file is used by default)
-roslaunch umi_dex capture.launch can_channel:=can1 filter_alpha:=0.5 d405_serial:=123456
+# Override defaults
+roslaunch umi_dex capture.launch can_channel:=can1 d405_serial:=123456
 ```
 
 ### Play back a bag
 
 ```bash
-roslaunch umi_dex playback.launch bag:=/path/to/capture_2025-04-10.bag
+roslaunch umi_dex playback.launch bag:=/path/to/capture.bag
 ```
-
-### Extract CSVs from a bag
-
-```bash
-rosrun umi_dex bag_extract_node \
-    --bag /path/to/capture.bag \
-    --out_dir /path/to/output
-```
-
-This produces:
-- `controller_angles.csv` — timestamped calibrated joint angles
-- `ir1_timestamps.csv` — per-frame timestamps for IR camera 1
-- `ir2_timestamps.csv` — per-frame timestamps for IR camera 2
 
 ## ROS Topics
 
@@ -159,15 +138,28 @@ This produces:
 | `/camera/imu` | `sensor_msgs/Imu` | 200 Hz | realsense2_camera |
 | `/camera_d405/color/image_raw` | `sensor_msgs/Image` | 30 Hz | realsense2_camera |
 | `/camera_d405/color/camera_info` | `sensor_msgs/CameraInfo` | 30 Hz | realsense2_camera |
-| `/hand/joint_states` | `umi_dex/HandJointState` | ~100 Hz | can_controller_node |
+| `/hand/can_raw` | `umi_dex/CanFrame` | ~300 Hz | can_raw_node |
 
-## Custom Message: HandJointState
+## Custom Messages
+
+### CanFrame
 
 ```
 std_msgs/Header header
-string[6]  names       # [thumb_roll, thumb_pitch, index_pitch, ...]
-float64[6] positions   # calibrated angles (0-100 scale)
-bool[6]    valid       # per-channel validity from CAN assembly
+uint32   arb_id
+uint8    dlc
+uint8[8] data
+```
+
+Raw CAN bus frame. Assembly into 6-channel joint angles and calibration happen offline in the Python pipeline.
+
+### HandJointState (legacy, kept for backward compatibility)
+
+```
+std_msgs/Header header
+string[6]  names
+float64[6] positions
+bool[6]    valid
 ```
 
 ## Package Structure
@@ -178,26 +170,23 @@ ros/
 ├── package.xml
 ├── setup.py
 ├── config/
-│   ├── calibration.csv      # symlink → ../../config/calibration.csv
-│   ├── camera_serials.conf  # default D455/D405 serials for capture.launch
+│   ├── calibration.csv
+│   ├── camera_serials.conf
 │   └── d455_params.yaml
 ├── launch/
-│   ├── capture.launch       # full pipeline + interactive recorder
-│   ├── d405.launch          # D405 color + camera info
-│   ├── d455.launch          # D455 stereo IR + IMU
-│   ├── controller.launch    # CAN controller standalone
-│   └── playback.launch      # bag playback
+│   ├── capture.launch
+│   ├── d405.launch
+│   ├── d455.launch
+│   ├── controller.launch
+│   └── playback.launch
 ├── msg/
+│   ├── CanFrame.msg
 │   └── HandJointState.msg
 ├── nodes/
-│   ├── can_controller_node  # CAN → ROS publisher
-│   ├── interactive_capture_node  # CLI recorder controller
-│   └── bag_extract_node     # bag → CSV extractor
+│   ├── can_raw_node
+│   └── interactive_capture_node
 └── umi_dex/
-    ├── __init__.py
-    ├── can_protocol.py      # CAN 0x112 frame assembly
-    ├── calibration.py       # raw count → actual angle mapping
-    └── bag_utils.py         # rosbag extraction helpers
+    └── __init__.py
 ```
 
 ## License

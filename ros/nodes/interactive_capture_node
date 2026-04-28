@@ -1,120 +1,213 @@
 #!/usr/bin/env python
-"""Interactive capture controller for rosbag recording sessions."""
+"""Interactive capture controller with episode-based recording.
+
+State machine:
+  idle -> warmup -> ready -> recording -> ready -> ... -> idle
+
+Commands vary by state (context-sensitive prompt).
+"""
 
 import datetime
 import glob
+import json
 import os
+import platform
 import select
 import shlex
 import signal
 import subprocess
 import sys
+import time
 from typing import List, Optional
 
 import rosbag
 import rospy
+from std_msgs.msg import String
+
+STATE_IDLE = "idle"
+STATE_WARMUP = "warmup"
+STATE_READY = "ready"
+STATE_RECORDING = "recording"
 
 
 class InteractiveRecorder:
-    """CLI-driven rosbag recording lifecycle manager."""
+    """CLI-driven rosbag recording with episode lifecycle."""
 
     def __init__(self):
         self.bag_dir = os.path.abspath(rospy.get_param("~bag_dir", "outputs"))
         self.base_name = rospy.get_param("~base_name", "capture")
         self.prompt_interval = float(rospy.get_param("~prompt_interval_sec", 0.5))
         self.topics = rospy.get_param("~topics", [])
+        self.warmup_duration_s = float(rospy.get_param("~warmup_duration_s", 15.0))
+        self.episode_topic = rospy.get_param("~episode_topic", "/session/episode")
 
         if not isinstance(self.topics, list) or not self.topics:
             raise ValueError("~topics must be a non-empty list of topic names")
 
-        self.record_proc: Optional[subprocess.Popen] = None
-        self.active_prefix: Optional[str] = None
+        if self.episode_topic not in self.topics:
+            self.topics.append(self.episode_topic)
+
+        self.episode_pub = rospy.Publisher(self.episode_topic, String, queue_size=10)
+
+        self.state = STATE_IDLE
+        self.record_proc = None  # type: Optional[subprocess.Popen]
+        self.active_prefix = None  # type: Optional[str]
+        self.episode_counter = 0
+        self.episodes = []  # type: List[dict]
+        self.warmup_start_time = None  # type: Optional[float]
 
     def run(self):
         os.makedirs(self.bag_dir, exist_ok=True)
         self._print_help()
-        self._print_status()
+        self._print_prompt()
 
         while not rospy.is_shutdown():
+            if self.state == STATE_WARMUP:
+                self._warmup_tick()
+                continue
+
             cmd = self._read_command()
             if cmd is None:
                 continue
 
+            self._dispatch(cmd)
+            self._print_prompt()
+
+        if self.state != STATE_IDLE:
+            self._stop_session(discard_current_episode=True)
+
+    def _dispatch(self, cmd):
+        if self.state == STATE_IDLE:
             if cmd == "s":
-                self._start_recording()
-            elif cmd == "c":
-                self._stop_recording(discard=False)
-            elif cmd == "r":
-                self._delete_last_recording()
+                self._start_session()
             elif cmd == "l":
                 self._list_recordings()
+            elif cmd == "r":
+                self._delete_last_recording()
             elif cmd == "q":
                 self._quit()
-                return
             else:
-                print("Unknown command. Use: s(start), c(stop), r(remove last), l(list), q(quit)")
+                self._print_help()
 
-            self._print_status()
+        elif self.state == STATE_READY:
+            if cmd == "e":
+                self._start_episode()
+            elif cmd == "c":
+                self._stop_session(discard_current_episode=False)
+            elif cmd == "q":
+                self._quit()
+            else:
+                print("In READY state. Use: e(episode), c(end session), q(quit)")
 
-        # ROS shutdown signal: stop ongoing recording and keep data.
-        self._stop_recording(discard=False)
+        elif self.state == STATE_RECORDING:
+            if cmd == "e":
+                self._end_episode()
+            elif cmd == "c":
+                self._stop_session(discard_current_episode=True)
+            elif cmd == "q":
+                self._quit()
+            else:
+                print("In RECORDING state. Use: e(end episode), c(end session + discard current), q(quit)")
 
-    def _print_help(self):
-        print("")
-        print("Interactive capture ready.")
-        print("Commands:")
-        print("  s : start new recording")
-        print("  c : stop current recording")
-        print("  r : delete last finished recording")
-        print("  l : list recordings with per-topic stats")
-        print("  q : quit (discard active recording if running)")
-        print("")
+    # ---- state transitions ----
 
-    def _print_status(self):
-        state = "recording" if self._is_recording() else "standby"
-        print("[state] {} | bag_dir={}".format(state, self.bag_dir))
-
-    def _read_command(self) -> Optional[str]:
-        sys.stdout.write("> ")
-        sys.stdout.flush()
-        while not rospy.is_shutdown():
-            ready, _, _ = select.select([sys.stdin], [], [], self.prompt_interval)
-            if not ready:
-                continue
-            line = sys.stdin.readline()
-            if line == "":
-                return "q"
-            return line.strip().lower()
-        return None
-
-    def _recording_prefix(self) -> str:
-        stamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        return os.path.join(self.bag_dir, "{}_{}".format(self.base_name, stamp))
-
-    def _start_recording(self):
-        if self._is_recording():
-            print("Recording already active.")
+    def _start_session(self):
+        if self.state != STATE_IDLE:
+            print("Session already active.")
             return
 
         self.active_prefix = self._recording_prefix()
+        self.episode_counter = 0
+        self.episodes = []
+
         cmd = ["rosbag", "record", "-O", self.active_prefix] + self.topics
-        print("Starting recording:")
+        print("Starting session recording:")
         print("  {}".format(" ".join(shlex.quote(part) for part in cmd)))
 
-        self.record_proc = subprocess.Popen(
-            cmd,
-            preexec_fn=os.setsid,
-        )
+        self.record_proc = subprocess.Popen(cmd, preexec_fn=os.setsid)
+        rospy.sleep(0.5)
 
-    def _stop_recording(self, discard: bool):
-        if not self._is_recording():
-            print("No active recording.")
+        self._write_session_sidecar(self.active_prefix)
+
+        self._publish_event("warmup_start")
+        self.warmup_start_time = time.time()
+        self.state = STATE_WARMUP
+
+        print("")
+        print("=" * 60)
+        print("IMU WARM-UP: Move the D455 with slow, smooth translations")
+        print("in a textured area for {:.0f} seconds.".format(self.warmup_duration_s))
+        print("DO NOT: hold still, rotate only, or move too fast.")
+        print("=" * 60)
+
+    def _warmup_tick(self):
+        elapsed = time.time() - self.warmup_start_time
+        remaining = self.warmup_duration_s - elapsed
+
+        if remaining <= 0:
+            self._publish_event("warmup_end")
+            self.state = STATE_READY
+            print("")
+            print("=" * 60)
+            print("WARM-UP COMPLETE. Device is ready to record.")
+            print("Press 'e' to start an episode, 'c' to end session.")
+            print("=" * 60)
+            self._print_prompt()
             return
 
-        assert self.record_proc is not None
-        assert self.active_prefix is not None
+        ready, _, _ = select.select([sys.stdin], [], [], 1.0)
+        if ready:
+            sys.stdin.readline()
+            print("  (warm-up cannot be skipped, {:.0f}s remaining)".format(remaining))
+        else:
+            sys.stdout.write(
+                "\r  [warm-up] {:.0f}s / {:.0f}s elapsed — keep moving...  ".format(
+                    elapsed, self.warmup_duration_s
+                )
+            )
+            sys.stdout.flush()
 
-        print("Stopping recording...")
+    def _start_episode(self):
+        self.episode_counter += 1
+        eid = self.episode_counter
+        self._publish_event("episode_start:{}".format(eid))
+        self.episodes.append({"id": eid, "status": "recording"})
+        self.state = STATE_RECORDING
+        print("")
+        print("[episode {}] Recording started. Press 'e' to end episode.".format(eid))
+
+    def _end_episode(self):
+        eid = self.episode_counter
+        self._publish_event("episode_end:{}".format(eid))
+        for ep in self.episodes:
+            if ep["id"] == eid and ep["status"] == "recording":
+                ep["status"] = "kept"
+        self.state = STATE_READY
+        kept = sum(1 for ep in self.episodes if ep["status"] == "kept")
+        print("[episode {}] Ended. Total kept: {}. Press 'e' for next, 'c' to end session.".format(eid, kept))
+
+    def _discard_current_episode(self):
+        if self.state != STATE_RECORDING:
+            return
+        eid = self.episode_counter
+        self._publish_event("episode_discard:{}".format(eid))
+        for ep in self.episodes:
+            if ep["id"] == eid:
+                ep["status"] = "discarded"
+        print("[episode {}] Discarded.".format(eid))
+
+    def _stop_session(self, discard_current_episode=False):
+        if self.state == STATE_RECORDING:
+            if discard_current_episode:
+                self._discard_current_episode()
+            else:
+                self._end_episode()
+
+        if self.record_proc is None:
+            self.state = STATE_IDLE
+            return
+
+        print("Stopping session recording...")
         try:
             os.killpg(os.getpgid(self.record_proc.pid), signal.SIGINT)
         except ProcessLookupError:
@@ -129,35 +222,125 @@ class InteractiveRecorder:
                 pass
             self.record_proc.wait(timeout=5)
 
-        if discard:
-            self._delete_by_prefix(self.active_prefix)
-            print("Discarded active recording.")
+        self._update_session_sidecar()
+
+        saved = self._bags_from_prefix(self.active_prefix)
+        if saved:
+            kept = sum(1 for ep in self.episodes if ep["status"] == "kept")
+            discarded = sum(1 for ep in self.episodes if ep["status"] == "discarded")
+            print("Session saved:")
+            for path in saved:
+                print("  {}".format(path))
+            print("  Episodes: {} kept, {} discarded".format(kept, discarded))
         else:
-            saved = self._bags_from_prefix(self.active_prefix)
-            if saved:
-                print("Saved recording:")
-                for path in saved:
-                    print("  {}".format(path))
-                    self._print_bag_summary(path, indent="    ")
-            else:
-                print("Recording stopped. No bag file found.")
+            print("Session stopped. No bag file found.")
 
         self.record_proc = None
         self.active_prefix = None
+        self.state = STATE_IDLE
 
-    def _delete_by_prefix(self, prefix: str):
-        candidates = sorted(glob.glob(prefix + "*"))
-        if not candidates:
+    def _quit(self):
+        if self.state != STATE_IDLE:
+            self._stop_session(discard_current_episode=True)
+        print("Exiting interactive capture controller.")
+        rospy.signal_shutdown("user quit")
+
+    # ---- episode topic ----
+
+    def _publish_event(self, event_str):
+        msg = String()
+        msg.data = event_str
+        self.episode_pub.publish(msg)
+        rospy.loginfo("Episode event: %s", event_str)
+
+    # ---- sidecar ----
+
+    def _write_session_sidecar(self, prefix):
+        try:
+            now_ros = rospy.Time.now()
+            sidecar = {
+                "ros_time_ns": int(now_ros.to_nsec()),
+                "wall_clock_ns": time.time_ns(),
+                "perf_counter_ns": time.perf_counter_ns(),
+                "hostname": platform.node(),
+                "kernel": platform.release(),
+                "topics": self.topics,
+                "warmup_duration_s": self.warmup_duration_s,
+                "episodes": [],
+                "created_utc": datetime.datetime.utcnow().isoformat() + "Z",
+            }
+            path = prefix + ".session.json"
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(sidecar, f, indent=2)
+            print("Wrote session sidecar: {}".format(path))
+        except Exception as exc:
+            rospy.logwarn("Failed to write session sidecar: %s", exc)
+
+    def _update_session_sidecar(self):
+        if self.active_prefix is None:
             return
-        for path in candidates:
-            if os.path.isfile(path):
-                os.remove(path)
+        path = self.active_prefix + ".session.json"
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                sidecar = json.load(f)
+            sidecar["episodes"] = self.episodes
+            sidecar["finished_utc"] = datetime.datetime.utcnow().isoformat() + "Z"
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(sidecar, f, indent=2)
+        except Exception as exc:
+            rospy.logwarn("Failed to update session sidecar: %s", exc)
 
-    def _bags_from_prefix(self, prefix: str) -> List[str]:
+    # ---- UI helpers ----
+
+    def _print_help(self):
+        print("")
+        print("UMI-Dex Interactive Capture (episode-based)")
+        print("  s : start new session (IMU warm-up + episode recording)")
+        print("  e : start/end episode (within a session)")
+        print("  c : end session (save bag with all episodes)")
+        print("  l : list saved recordings")
+        print("  r : delete last saved recording")
+        print("  q : quit")
+        print("")
+
+    def _print_prompt(self):
+        if self.state == STATE_IDLE:
+            hint = "s(session) l(list) r(remove) q(quit)"
+        elif self.state == STATE_READY:
+            kept = sum(1 for ep in self.episodes if ep["status"] == "kept")
+            hint = "e(episode) c(end session) | {} episodes kept".format(kept)
+        elif self.state == STATE_RECORDING:
+            hint = "e(end episode {}) c(end session+discard)".format(self.episode_counter)
+        else:
+            hint = ""
+        sys.stdout.write("[{}] {} > ".format(self.state, hint))
+        sys.stdout.flush()
+
+    def _read_command(self):
+        while not rospy.is_shutdown():
+            ready, _, _ = select.select([sys.stdin], [], [], self.prompt_interval)
+            if not ready:
+                continue
+            line = sys.stdin.readline()
+            if line == "":
+                return "q"
+            return line.strip().lower()
+        return None
+
+    def _recording_prefix(self):
+        stamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        return os.path.join(self.bag_dir, "{}_{}".format(self.base_name, stamp))
+
+    def _bags_from_prefix(self, prefix):
         return sorted(
-            path
-            for path in glob.glob(prefix + "*")
+            path for path in glob.glob(prefix + "*")
             if path.endswith(".bag") and os.path.isfile(path)
+        )
+
+    def _all_bags(self):
+        return sorted(
+            glob.glob(os.path.join(self.bag_dir, "*.bag")),
+            key=os.path.getmtime,
         )
 
     def _list_recordings(self):
@@ -169,12 +352,6 @@ class InteractiveRecorder:
         for bag in bags:
             self._print_bag_summary(bag, indent="  ")
 
-    def _all_bags(self) -> List[str]:
-        return sorted(
-            glob.glob(os.path.join(self.bag_dir, "*.bag")),
-            key=os.path.getmtime,
-        )
-
     def _delete_last_recording(self):
         bags = self._all_bags()
         if not bags:
@@ -182,45 +359,25 @@ class InteractiveRecorder:
             return
         last = bags[-1]
         os.remove(last)
+        sidecar = last.replace(".bag", ".session.json")
+        if os.path.isfile(sidecar):
+            os.remove(sidecar)
         print("Deleted: {}".format(last))
 
-    def _quit(self):
-        if self._is_recording():
-            self._stop_recording(discard=True)
-        print("Exiting interactive capture controller.")
-
-    def _is_recording(self) -> bool:
-        if self.record_proc is None:
-            return False
-        if self.record_proc.poll() is None:
-            return True
-        self.record_proc = None
-        self.active_prefix = None
-        return False
-
-    def _print_bag_summary(self, bag_path: str, indent: str = ""):
+    def _print_bag_summary(self, bag_path, indent=""):
         summary = self._summarize_bag(bag_path)
         if summary is None:
             print("{}{} (summary unavailable)".format(indent, os.path.basename(bag_path)))
             return
-
-        print(
-            "{}{} | messages={} | duration={:.3f}s".format(
-                indent,
-                os.path.basename(bag_path),
-                summary["total_messages"],
-                summary["duration_sec"],
-            )
-        )
+        print("{}{} | messages={} | duration={:.3f}s".format(
+            indent, os.path.basename(bag_path),
+            summary["total_messages"], summary["duration_sec"],
+        ))
         for topic, count, freq in summary["topic_stats"]:
             freq_text = "{:.2f}".format(freq) if freq > 0.0 else "n/a"
-            print(
-                "{}  - {}: count={} rate={} Hz/FPS".format(
-                    indent, topic, count, freq_text
-                )
-            )
+            print("{}  - {}: count={} rate={} Hz".format(indent, topic, count, freq_text))
 
-    def _summarize_bag(self, bag_path: str):
+    def _summarize_bag(self, bag_path):
         try:
             with rosbag.Bag(bag_path, "r") as bag:
                 info = bag.get_type_and_topic_info()
@@ -228,7 +385,6 @@ class InteractiveRecorder:
         except Exception as exc:
             rospy.logwarn("Failed to summarize bag %s: %s", bag_path, exc)
             return None
-
         topics = info.topics if hasattr(info, "topics") else {}
         topic_stats = []
         total_messages = 0
@@ -242,12 +398,7 @@ class InteractiveRecorder:
             if freq is None:
                 freq = 0.0
             topic_stats.append((topic, count, float(freq)))
-
-        return {
-            "duration_sec": duration_sec,
-            "total_messages": total_messages,
-            "topic_stats": topic_stats,
-        }
+        return {"duration_sec": duration_sec, "total_messages": total_messages, "topic_stats": topic_stats}
 
 
 def main():
@@ -257,7 +408,6 @@ def main():
     except ValueError as exc:
         rospy.logfatal(str(exc))
         return
-
     recorder.run()
 
 
